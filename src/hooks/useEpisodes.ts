@@ -82,7 +82,7 @@ export function useEpisodes() {
   return useQuery({
     queryKey: ['vuelta-al-mundo', 'episodes'],
     queryFn: async () => {
-      const signal = AbortSignal.timeout(8000);
+      const signal = AbortSignal.timeout(12000);
       const events = await nostr.query(
         [{ kinds: [37183], authors: [NARRATOR_PUBKEY], '#t': ['vuelta-al-mundo'], limit: 50 }],
         { signal }
@@ -95,7 +95,8 @@ export function useEpisodes() {
 
       return episodes;
     },
-    staleTime: 60000,
+    staleTime: 30000,
+    retry: 2,
   });
 }
 
