@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, forwardRef } from 'react';
-import { Zap, Copy, Check, ExternalLink, Sparkle, Sparkles, Star, Rocket, ArrowLeft, X } from 'lucide-react';
+import { Zap, Copy, Check, ExternalLink, ArrowLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -45,13 +45,7 @@ interface ZapDialogProps {
   extraTags?: string[][];
 }
 
-const presetAmounts = [
-  { amount: 1, icon: Sparkle },
-  { amount: 50, icon: Sparkles },
-  { amount: 100, icon: Zap },
-  { amount: 250, icon: Star },
-  { amount: 1000, icon: Rocket },
-];
+const presetAmounts = [10, 21, 42];
 
 interface ZapContentProps {
   invoice: string | null;
@@ -117,7 +111,7 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
 
           {/* Invoice input */}
           <div className="space-y-2 mt-4">
-            <Label htmlFor="invoice">Lightning Invoice</Label>
+            <Label htmlFor="invoice">Factura Lightning</Label>
             <div className="flex gap-2 min-w-0">
               <Input
                 id="invoice"
@@ -154,7 +148,7 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
                 size="lg"
               >
                 <Zap className="h-4 w-4 mr-2" />
-                {isZapping ? "Processing..." : "Pay with WebLN"}
+                {isZapping ? 'Procesando...' : 'Pagar con WebLN'}
               </Button>
             )}
 
@@ -165,11 +159,11 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
               size="lg"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
-              Open in Lightning Wallet
+              Abrir en cartera Lightning
             </Button>
 
             <div className="text-xs sm:text-[.65rem] text-muted-foreground text-center">
-              Scan the QR code or copy the invoice to pay with any Lightning wallet.
+              Escanea el código QR o copia la factura para pagar con cualquier cartera Lightning.
             </div>
           </div>
         </div>
@@ -177,58 +171,67 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
     ) : (
       <>
         <div className="grid gap-3 px-4 py-4 w-full overflow-hidden">
+          {/* Preset amounts */}
           <ToggleGroup
             type="single"
             value={String(amount)}
             onValueChange={(value) => {
-              if (value) {
-                setAmount(parseInt(value, 10));
-              }
+              if (value) setAmount(parseInt(value, 10));
             }}
-            className="grid grid-cols-5 gap-1 w-full"
+            className="grid grid-cols-3 gap-2 w-full"
           >
-            {presetAmounts.map(({ amount: presetAmount, icon: Icon }) => (
+            {presetAmounts.map((preset) => (
               <ToggleGroupItem
-                key={presetAmount}
-                value={String(presetAmount)}
-                className="flex flex-col h-auto min-w-0 text-xs px-1 py-2"
+                key={preset}
+                value={String(preset)}
+                className="flex items-center justify-center gap-1.5 h-10 font-cinzel font-bold text-sm"
               >
-                <Icon className="h-4 w-4 mb-1" />
-                <span className="truncate">{presetAmount}</span>
+                <Zap className="h-3.5 w-3.5" />
+                {preset} sats
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-muted" />
-            <span className="text-xs text-muted-foreground">OR</span>
-            <div className="h-px flex-1 bg-muted" />
+
+          {/* Custom amount */}
+          <div className="space-y-1">
+            <Label htmlFor="custom-amount" className="text-xs text-muted-foreground">
+              O introduce otra cantidad (sats)
+            </Label>
+            <Input
+              ref={inputRef}
+              id="custom-amount"
+              type="number"
+              min="1"
+              placeholder="Cantidad personalizada..."
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full"
+            />
           </div>
-          <Input
-            ref={inputRef}
-            id="custom-amount"
-            type="number"
-            placeholder="Custom amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full"
-          />
-          <Textarea
-            id="custom-comment"
-            placeholder="Add a comment (optional)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="w-full resize-none"
-            rows={2}
-          />
+
+          {/* Comment */}
+          <div className="space-y-1">
+            <Label htmlFor="custom-comment" className="text-xs text-muted-foreground">
+              Comentario (opcional)
+            </Label>
+            <Textarea
+              id="custom-comment"
+              placeholder="Añade un mensaje..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full resize-none"
+              rows={2}
+            />
+          </div>
         </div>
         <div className="px-4 pb-4">
           <Button onClick={handleZap} className="w-full" disabled={isZapping} size="default">
             {isZapping ? (
-              'Creating invoice...'
+              'Generando factura...'
             ) : (
               <>
                 <Zap className="h-4 w-4 mr-2" />
-                Zap {amount} sats
+                Zapear {amount} sats
               </>
             )}
           </Button>
@@ -249,7 +252,7 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
     setOpen(false);
     onSuccess?.();
   }, extraTags);
-  const [amount, setAmount] = useState<number | string>(100);
+  const [amount, setAmount] = useState<number | string>(21);
   const [comment, setComment] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
@@ -258,7 +261,7 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
 
   useEffect(() => {
     if (target) {
-      setComment('Zapped with MKStack!');
+      setComment('');
     }
   }, [target]);
 
@@ -304,8 +307,8 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
       await navigator.clipboard.writeText(invoice);
       setCopied(true);
       toast({
-        title: 'Invoice copied',
-        description: 'Lightning invoice copied to clipboard',
+        title: 'Factura copiada',
+        description: 'Factura Lightning copiada al portapapeles',
       });
       setTimeout(() => setCopied(false), 2000);
     }
@@ -319,18 +322,10 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
   };
 
   useEffect(() => {
-    if (open) {
-      setAmount(100);
-      setInvoice(null);
-      setCopied(false);
-      setQrCodeUrl('');
-    } else {
-      // Clean up state when dialog closes
-      setAmount(100);
-      setInvoice(null);
-      setCopied(false);
-      setQrCodeUrl('');
-    }
+    setAmount(21);
+    setInvoice(null);
+    setCopied(false);
+    setQrCodeUrl('');
   }, [open, setInvoice]);
 
   const handleZap = () => {
@@ -420,14 +415,14 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
               </Button>
             </DrawerClose>
 
-            <DrawerTitle className="text-lg break-words pt-2">
-              {invoice ? 'Lightning Payment' : 'Send a Zap'}
+            <DrawerTitle className="text-lg break-words pt-2 font-cinzel">
+              {invoice ? 'Pago Lightning' : '⚡ Apostar sats'}
             </DrawerTitle>
-            <DrawerDescription className="text-sm break-words text-center">
+            <DrawerDescription className="text-sm break-words text-center font-garamond">
               {invoice ? (
-                'Pay with Bitcoin Lightning Network'
+                'Paga con la red Bitcoin Lightning'
               ) : (
-                'Zaps are small Bitcoin payments that support the creator of this item. If you enjoyed this, consider sending a zap!'
+                'Elige una cantidad o introduce la que quieras. Tu zap registra tu apuesta en la expedición.'
               )}
             </DrawerDescription>
           </DrawerHeader>
@@ -448,16 +443,14 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] max-h-[95vh] overflow-hidden" data-testid="zap-modal">
         <DialogHeader>
-          <DialogTitle className="text-lg break-words">
-            {invoice ? 'Lightning Payment' : 'Send a Zap'}
+          <DialogTitle className="text-lg break-words font-cinzel">
+            {invoice ? 'Pago Lightning' : '⚡ Apostar sats'}
           </DialogTitle>
-          <DialogDescription className="text-sm text-center break-words">
+          <DialogDescription className="text-sm text-center break-words font-garamond">
             {invoice ? (
-              'Pay with Bitcoin Lightning Network'
+              'Paga con la red Bitcoin Lightning'
             ) : (
-              <>
-                Zaps are small Bitcoin payments that support the creator of this item. If you enjoyed this, consider sending a zap!
-              </>
+              'Elige una cantidad o introduce la que quieras. Tu zap registra tu apuesta en la expedición.'
             )}
           </DialogDescription>
         </DialogHeader>
