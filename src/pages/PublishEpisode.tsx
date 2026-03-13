@@ -29,6 +29,8 @@ interface FormData {
   answerExplanation: string;
   zapAmount: string;
   source: string;
+  /** ISO date string for when the answer is revealed (e.g. "2026-03-15") */
+  revealDate: string;
 }
 
 const INITIAL_FORM: FormData = {
@@ -44,6 +46,7 @@ const INITIAL_FORM: FormData = {
   answerExplanation: '',
   zapAmount: '21',
   source: '',
+  revealDate: '',
 };
 
 function generateSlug(episode: string, title: string): string {
@@ -136,6 +139,12 @@ export default function PublishEpisode() {
 
     if (form.source) {
       tags.push(['source', form.source]);
+    }
+
+    // reveal_at: unix timestamp at midnight UTC on the chosen date
+    if (form.revealDate) {
+      const revealTs = Math.floor(new Date(`${form.revealDate}T12:00:00Z`).getTime() / 1000);
+      tags.push(['reveal_at', String(revealTs)]);
     }
 
     publish(
@@ -233,10 +242,10 @@ export default function PublishEpisode() {
                 </h2>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="episode" className="font-cinzel text-xs text-amber-500/80">
-                      Número de episodio *
+                      Episodio *
                     </Label>
                     <Input
                       id="episode"
@@ -262,7 +271,23 @@ export default function PublishEpisode() {
                       required
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="revealDate" className="font-cinzel text-xs text-amber-500/80">
+                      Resolución *
+                    </Label>
+                    <Input
+                      id="revealDate"
+                      type="date"
+                      value={form.revealDate}
+                      onChange={set('revealDate')}
+                      className="bg-background/50 border-border/60 font-garamond"
+                      required
+                    />
+                  </div>
                 </div>
+                <p className="text-[11px] text-muted-foreground font-garamond -mt-1">
+                  La fecha de resolución es cuando se revela públicamente la respuesta correcta (1–2 días después de la publicación).
+                </p>
                 <div className="space-y-1.5">
                   <Label htmlFor="title" className="font-cinzel text-xs text-amber-500/80">
                     Título del episodio *

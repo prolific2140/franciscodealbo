@@ -7,6 +7,7 @@ export interface QuizEpisode {
   d: string;
   title: string;
   episode: number;
+  /** Historical date of the event (ISO 8601) */
   date: string;
   narrative: string;
   optionA: string;
@@ -16,9 +17,16 @@ export interface QuizEpisode {
   answer: 'a' | 'b' | 'c' | 'd';
   answerExplanation: string;
   zapAmount: number;
+  /** Unix timestamp after which the answer is revealed. 0 = not revealed yet. */
+  revealAt: number;
   image?: string;
-  /** Source key: 'albo' | 'pigafetta' | 'mafra' | 'rutaelcano' */
+  /** Source key: 'albo' | 'pigafetta' | 'mafra' | 'gomara' | 'martinez' | 'rutaelcano' */
   source?: string;
+}
+
+/** Whether the answer has been revealed (revealAt is set and in the past) */
+export function isRevealed(episode: QuizEpisode): boolean {
+  return episode.revealAt > 0 && Date.now() / 1000 >= episode.revealAt;
 }
 
 function getTag(event: NostrEvent, name: string): string | undefined {
@@ -58,6 +66,7 @@ function parseEpisode(event: NostrEvent): QuizEpisode | null {
     answer,
     answerExplanation,
     zapAmount: parseInt(getTag(event, 'zap_amount') || '21') || 21,
+    revealAt: parseInt(getTag(event, 'reveal_at') || '0') || 0,
     image: getTag(event, 'image'),
     source: getTag(event, 'source'),
   };
@@ -72,9 +81,8 @@ export function useEpisodes() {
 
   return useQuery({
     queryKey: ['vuelta-al-mundo', 'episodes'],
-    queryFn: async (c) => {
+    queryFn: async () => {
       const signal = AbortSignal.timeout(8000);
-      // Security: filter by narrator's pubkey so only authorized episodes appear
       const events = await nostr.query(
         [{ kinds: [37183], authors: [NARRATOR_PUBKEY], '#t': ['vuelta-al-mundo'], limit: 50 }],
         { signal }

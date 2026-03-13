@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { NARRATOR_PUBKEY } from '@/hooks/useEpisodes';
-import { Anchor, Compass, PenLine } from 'lucide-react';
+import { Anchor, Compass, PenLine, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export { NARRATOR_PUBKEY };
@@ -48,6 +48,19 @@ export function SiteHeader() {
             >
               <Anchor className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Episodios</span>
+            </Link>
+
+            <Link
+              to="/historial"
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md font-cinzel text-xs transition-colors',
+                location.pathname === '/historial'
+                  ? 'text-amber-400 bg-amber-900/20'
+                  : 'text-muted-foreground hover:text-amber-400 hover:bg-amber-900/10'
+              )}
+            >
+              <History className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Historial</span>
             </Link>
 
             {isNarrator && (

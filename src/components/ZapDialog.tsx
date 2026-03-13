@@ -39,6 +39,8 @@ interface ZapDialogProps {
   target: Event;
   children?: React.ReactNode;
   className?: string;
+  /** Called immediately after a successful zap payment */
+  onSuccess?: () => void;
 }
 
 const presetAmounts = [
@@ -235,13 +237,16 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
 ));
 ZapContent.displayName = 'ZapContent';
 
-export function ZapDialog({ target, children, className }: ZapDialogProps) {
+export function ZapDialog({ target, children, className, onSuccess }: ZapDialogProps) {
   const [open, setOpen] = useState(false);
   const { user } = useCurrentUser();
   const { data: author } = useAuthor(target.pubkey);
   const { toast } = useToast();
   const { webln, activeNWC } = useWallet();
-  const { zap, isZapping, invoice, setInvoice } = useZaps(target, webln, activeNWC, () => setOpen(false));
+  const { zap, isZapping, invoice, setInvoice } = useZaps(target, webln, activeNWC, () => {
+    setOpen(false);
+    onSuccess?.();
+  });
   const [amount, setAmount] = useState<number | string>(100);
   const [comment, setComment] = useState<string>('');
   const [copied, setCopied] = useState(false);
