@@ -45,7 +45,8 @@ interface ZapDialogProps {
   extraTags?: string[][];
 }
 
-const presetAmounts = [10, 21, 42];
+const MIN_SATS = 21;
+const presetAmounts = [21, 42];
 
 interface ZapContentProps {
   invoice: string | null;
@@ -178,7 +179,7 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
             onValueChange={(value) => {
               if (value) setAmount(parseInt(value, 10));
             }}
-            className="grid grid-cols-3 gap-2 w-full"
+            className="grid grid-cols-2 gap-2 w-full"
           >
             {presetAmounts.map((preset) => (
               <ToggleGroupItem
@@ -195,14 +196,14 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
           {/* Custom amount */}
           <div className="space-y-1">
             <Label htmlFor="custom-amount" className="text-xs text-muted-foreground">
-              O introduce otra cantidad (sats)
+              O introduce otra cantidad (mínimo {MIN_SATS} sats)
             </Label>
             <Input
               ref={inputRef}
               id="custom-amount"
               type="number"
-              min="1"
-              placeholder="Cantidad personalizada..."
+              min={MIN_SATS}
+              placeholder={`${MIN_SATS} sats o más...`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full"
@@ -330,6 +331,14 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
 
   const handleZap = () => {
     const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
+    if (!finalAmount || finalAmount < MIN_SATS) {
+      toast({
+        title: `Apuesta mínima: ${MIN_SATS} sats`,
+        description: `Debes apostar al menos ${MIN_SATS} sats para participar.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     zap(finalAmount, comment);
   };
 
