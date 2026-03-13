@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 
 interface FormData {
   title: string;
+  /** ISO date in expedition year, e.g. "1521-03-13" */
   date: string;
   narrative: string;
   optionA: string;
@@ -43,6 +44,8 @@ const INITIAL_FORM: FormData = {
   answer: '', answerExplanation: '', zapAmount: '21', source: '', revealDate: '',
 };
 
+const EXPEDITION_YEARS = [1519, 1520, 1521, 1522] as const;
+
 function generateSlug(episode: number, title: string): string {
   const num = String(episode).padStart(3, '0');
   const slug = title.toLowerCase()
@@ -51,25 +54,27 @@ function generateSlug(episode: number, title: string): string {
   return `ep-${num}-${slug}`;
 }
 
-/** Translate today's month/day into the corresponding expedition year (1519-1522) */
-function expeditionDate(publishDate: string): string {
-  if (!publishDate) return '';
-  const d = new Date(`${publishDate}T12:00:00`);
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
+/** Extract YYYY-MM-DD parts from an ISO date string, with fallback defaults */
+function parseDateParts(iso: string): { year: number; month: string; day: string } {
+  const parts = iso.split('-');
+  return {
+    year: parseInt(parts[0]) || 1521,
+    month: parts[1] ?? '03',
+    day: parts[2] ?? '13',
+  };
+}
 
-  let year: number;
-  if (month >= 9) {
-    year = 1519;
-  } else if (month <= 3) {
-    year = 1521;
-  } else if (month <= 6) {
-    year = 1520;
-  } else {
-    year = 1521;
-  }
+/** Build ISO date from parts */
+function buildDate(year: number, month: string, day: string): string {
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
 
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+/** Default expedition year for a given calendar month */
+function defaultExpeditionYear(month: number): number {
+  if (month >= 9) return 1519;   // Sep–Dec: departure & Atlantic crossing
+  if (month <= 3) return 1521;   // Jan–Mar: Pacific crossing & Philippines
+  if (month <= 6) return 1520;   // Apr–Jun: Patagonia & strait
+  return 1521;                   // Jul–Aug: Philippines & Moluccas
 }
 
 export default function PublishEpisode() {
@@ -82,25 +87,38 @@ export default function PublishEpisode() {
   const { generate, isGenerating } = useGenerateEpisode();
   const { toast } = useToast();
 
+  // Today's calendar date (for display and reveal calculation)
   const [publishDate, setPublishDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  // Expedition date parts — editable independently
+  const todayMonth = new Date().getMonth() + 1;
+  const todayDay = new Date().getDate();
+  const [histYear, setHistYear] = useState<number>(() => defaultExpeditionYear(todayMonth));
+  const [histMonth, setHistMonth] = useState<string>(() => String(todayMonth).padStart(2, '0'));
+  const [histDay, setHistDay] = useState<string>(() => String(todayDay).padStart(2, '0'));
+
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [generated, setGenerated] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
 
   const isNarrator = user?.pubkey === NARRATOR_PUBKEY;
-
-  // Episode number is always computed — never user-editable
   const nextEpisode = (episodes?.length ?? 0) + 1;
+
+  // Keep form.date in sync with the three selectors
+  useEffect(() => {
+    setForm(f => ({ ...f, date: buildDate(histYear, histMonth, histDay) }));
+  }, [histYear, histMonth, histDay]);
 
   // Auto-fill reveal date = publishDate + 2 days
   useEffect(() => {
     if (publishDate) {
       const d = new Date(`${publishDate}T12:00:00`);
       d.setDate(d.getDate() + 2);
-      const reveal = d.toISOString().slice(0, 10);
-      setForm(f => ({ ...f, revealDate: reveal }));
+      setForm(f => ({ ...f, revealDate: d.toISOString().slice(0, 10) }));
     }
   }, [publishDate]);
+
+  // ── Guards ────────────────────────────────────────────────────────────────
 
   if (!user) {
     return (
@@ -122,26 +140,31 @@ export default function PublishEpisode() {
         <div className="container max-w-3xl mx-auto px-4 py-24 text-center">
           <ScrollText className="h-12 w-12 text-amber-800 mx-auto mb-4" />
           <h2 className="font-cinzel text-xl text-amber-400 mb-2">Solo el narrador puede publicar</h2>
-          <p className="font-garamond text-muted-foreground">
-            Solo Francisco de Albo puede escribir en esta bitácora.
-          </p>
+          <p className="font-garamond text-muted-foreground">Solo Francisco de Albo puede escribir en esta bitácora.</p>
         </div>
       </div>
     );
   }
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
 
   const set = (key: keyof FormData) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
 
   async function handleGenerate() {
-    const histDate = expeditionDate(publishDate);
-    if (!histDate) {
-      toast({ title: 'Error', description: 'Selecciona una fecha de publicación.', variant: 'destructive' });
-      return;
-    }
+    const histDate = buildDate(histYear, histMonth, histDay);
     try {
       const ep = await generate(histDate, nextEpisode);
+      // If the AI returns a date, sync the selectors
+      if (ep.date) {
+        const parts = parseDateParts(ep.date as unknown as string);
+        if (EXPEDITION_YEARS.includes(parts.year as typeof EXPEDITION_YEARS[number])) {
+          setHistYear(parts.year);
+          setHistMonth(parts.month);
+          setHistDay(parts.day);
+        }
+      }
       setForm(f => ({
         ...f,
         title: ep.title,
@@ -163,7 +186,7 @@ export default function PublishEpisode() {
   }
 
   function handleReset() {
-    setForm(f => ({ ...INITIAL_FORM, revealDate: f.revealDate }));
+    setForm(f => ({ ...INITIAL_FORM, date: f.date, revealDate: f.revealDate }));
     setGenerated(false);
   }
 
@@ -171,20 +194,20 @@ export default function PublishEpisode() {
     e.preventDefault();
 
     if (!form.answer) {
-      toast({ title: 'Error', description: 'Debes elegir la respuesta correcta.', variant: 'destructive' });
+      toast({ title: 'Falta la respuesta', description: 'Haz clic en una opción para marcarla como correcta.', variant: 'destructive' });
       return;
     }
     if (!form.title || !form.date || !form.narrative ||
       !form.optionA || !form.optionB || !form.optionC || !form.optionD || !form.answerExplanation) {
-      toast({ title: 'Error', description: 'Rellena todos los campos obligatorios.', variant: 'destructive' });
+      toast({ title: 'Campos incompletos', description: 'Rellena todos los campos antes de publicar.', variant: 'destructive' });
       return;
     }
 
     const epNum = nextEpisode;
-    const d = generateSlug(epNum, form.title);
+    const dTag = generateSlug(epNum, form.title);
 
     const tags: string[][] = [
-      ['d', d],
+      ['d', dTag],
       ['title', form.title],
       ['episode', String(epNum)],
       ['date', form.date],
@@ -208,24 +231,32 @@ export default function PublishEpisode() {
       { kind: 37183, content: form.narrative, tags },
       {
         onSuccess: () => {
-          toast({ title: '⚓ ¡Episodio publicado!', description: `El episodio ${epNum} ya navega en Nostr.` });
+          toast({ title: '⚓ ¡Episodio publicado!', description: `El episodio #${epNum} ya navega en Nostr.` });
           navigate('/episodios');
         },
-        onError: (err) => toast({ title: 'Error al publicar', description: err.message, variant: 'destructive' }),
+        onError: (err) => {
+          toast({ title: 'Error al publicar', description: err.message, variant: 'destructive' });
+        },
       }
     );
   }
 
-  const histDate = expeditionDate(publishDate);
-  const histFormatted = histDate
-    ? new Date(`${histDate}T12:00:00`).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
-    : '';
+  const histDateFormatted = (() => {
+    try {
+      return new Date(`${form.date}T12:00:00`).toLocaleDateString('es-ES', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      });
+    } catch { return form.date; }
+  })();
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-ocean-deep">
       <SiteHeader />
 
       <main className="container max-w-3xl mx-auto px-4 py-8 pb-16">
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -235,17 +266,17 @@ export default function PublishEpisode() {
           </div>
           <h1 className="font-cinzel text-2xl font-bold text-amber-300 mb-2">Publicar Nuevo Episodio</h1>
           <p className="font-garamond text-sm text-muted-foreground">
-            Elige la fecha de hoy y deja que la IA genere el episodio histórico correspondiente
+            Configura la fecha y deja que la IA genere el episodio histórico correspondiente
           </p>
         </div>
 
-        {/* ── STEP 1: Date selector + Generate ── */}
+        {/* ── STEP 1 ── */}
         <Card className="border border-amber-900/30 bg-card mb-6">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <h2 className="font-cinzel text-sm text-amber-400 flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Paso 1 — Selecciona la fecha y genera el episodio
+                Paso 1 — Configura las fechas y genera
               </h2>
               {generated && (
                 <Badge className="bg-emerald-900/30 text-emerald-400 border-emerald-700/40 font-cinzel text-[10px]">
@@ -254,59 +285,39 @@ export default function PublishEpisode() {
               )}
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
 
-            {/* Episode number indicator (read-only) */}
+          <CardContent className="space-y-5">
+
+            {/* Episode number (read-only) */}
             <div className="flex items-center gap-3 px-3 py-2 rounded-md border border-amber-900/30 bg-amber-900/10">
               <span className="font-cinzel text-xs text-amber-600/70">Episodio</span>
-              {loadingEpisodes ? (
-                <span className="font-cinzel text-sm text-muted-foreground animate-pulse">Calculando…</span>
-              ) : (
-                <span className="font-cinzel text-lg font-bold text-amber-400">#{nextEpisode}</span>
-              )}
+              {loadingEpisodes
+                ? <span className="font-cinzel text-sm text-muted-foreground animate-pulse">calculando…</span>
+                : <span className="font-cinzel text-lg font-bold text-amber-400">#{nextEpisode}</span>
+              }
               <span className="font-garamond text-xs text-muted-foreground ml-auto">
-                Calculado automáticamente ({episodes?.length ?? 0} publicados)
+                {episodes?.length ?? 0} publicados
               </span>
             </div>
 
+            {/* Publication date + reveal date */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="publishDate" className="font-cinzel text-xs text-amber-500/80">
-                  Fecha de publicación (hoy)
+                  Fecha de publicación
                 </Label>
                 <Input
                   id="publishDate"
                   type="date"
                   value={publishDate}
-                  onChange={e => {
-                    setPublishDate(e.target.value);
-                    setGenerated(false);
-                  }}
+                  onChange={e => { setPublishDate(e.target.value); setGenerated(false); }}
                   className="bg-background/50 border-border/60 font-garamond"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="font-cinzel text-xs text-amber-500/80">Fecha histórica equivalente</Label>
-                <div className="h-9 px-3 flex items-center rounded-md border border-border/40 bg-muted/20">
-                  <span className="font-garamond text-sm text-amber-400">{histFormatted || '—'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="zapAmount" className="font-cinzel text-xs text-amber-500/80">Sats por apuesta</Label>
-                <Input
-                  id="zapAmount"
-                  type="number"
-                  min="1"
-                  value={form.zapAmount}
-                  onChange={set('zapAmount')}
-                  className="bg-background/50 border-border/60 font-garamond"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="revealDate" className="font-cinzel text-xs text-amber-500/80">Fecha de resolución</Label>
+                <Label htmlFor="revealDate" className="font-cinzel text-xs text-amber-500/80">
+                  Fecha de resolución
+                </Label>
                 <Input
                   id="revealDate"
                   type="date"
@@ -317,15 +328,96 @@ export default function PublishEpisode() {
               </div>
             </div>
 
-            <p className="text-[11px] text-muted-foreground font-garamond">
-              La resolución se fija automáticamente 2 días después. Podrás editarla antes de publicar.
-            </p>
+            {/* Historical date with YEAR selector */}
+            <div className="space-y-2">
+              <Label className="font-cinzel text-xs text-amber-500/80">
+                Fecha histórica de la expedición
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {/* Year selector — key control */}
+                <div className="space-y-1">
+                  <p className="font-cinzel text-[10px] text-muted-foreground uppercase tracking-widest">Año</p>
+                  <Select
+                    value={String(histYear)}
+                    onValueChange={v => { setHistYear(Number(v)); setGenerated(false); }}
+                  >
+                    <SelectTrigger className="bg-background/50 border-amber-800/50 font-cinzel text-amber-300 font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPEDITION_YEARS.map(y => (
+                        <SelectItem key={y} value={String(y)} className="font-cinzel">
+                          {y}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Month */}
+                <div className="space-y-1">
+                  <p className="font-cinzel text-[10px] text-muted-foreground uppercase tracking-widest">Mes</p>
+                  <Select
+                    value={histMonth}
+                    onValueChange={v => { setHistMonth(v); setGenerated(false); }}
+                  >
+                    <SelectTrigger className="bg-background/50 border-border/60 font-garamond">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const m = String(i + 1).padStart(2, '0');
+                        const name = new Date(`2000-${m}-01`).toLocaleDateString('es-ES', { month: 'long' });
+                        return (
+                          <SelectItem key={m} value={m} className="font-garamond capitalize">
+                            {name}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Day */}
+                <div className="space-y-1">
+                  <p className="font-cinzel text-[10px] text-muted-foreground uppercase tracking-widest">Día</p>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={histDay}
+                    onChange={e => { setHistDay(e.target.value.padStart(2, '0')); setGenerated(false); }}
+                    className="bg-background/50 border-border/60 font-garamond"
+                  />
+                </div>
+              </div>
+              {/* Formatted preview */}
+              {form.date && (
+                <p className="font-garamond text-sm text-amber-400/80 italic pl-1">
+                  {histDateFormatted}
+                </p>
+              )}
+            </div>
 
+            {/* Zap amount */}
+            <div className="space-y-1.5">
+              <Label htmlFor="zapAmount" className="font-cinzel text-xs text-amber-500/80">
+                Sats mínimos por apuesta
+              </Label>
+              <Input
+                id="zapAmount"
+                type="number"
+                min="1"
+                value={form.zapAmount}
+                onChange={set('zapAmount')}
+                className="bg-background/50 border-border/60 font-garamond w-40"
+              />
+            </div>
+
+            {/* Generate button */}
             <div className="flex gap-3 pt-1">
               <Button
                 type="button"
                 onClick={handleGenerate}
-                disabled={isGenerating || !publishDate || loadingEpisodes}
+                disabled={isGenerating || loadingEpisodes}
                 className="flex-1 bg-amber-600 hover:bg-amber-500 text-amber-950 font-cinzel font-bold text-sm gap-2"
               >
                 {isGenerating ? (
@@ -341,14 +433,9 @@ export default function PublishEpisode() {
                 )}
               </Button>
               {generated && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleReset}
-                  className="font-cinzel text-xs border-border/60 gap-1.5"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Regenerar
+                <Button type="button" variant="outline" onClick={handleReset}
+                  className="font-cinzel text-xs border-border/60 gap-1.5">
+                  <RotateCcw className="h-3.5 w-3.5" /> Regenerar
                 </Button>
               )}
             </div>
@@ -360,11 +447,8 @@ export default function PublishEpisode() {
                 </p>
                 <div className="flex justify-center gap-1 mt-3">
                   {[0, 1, 2, 3, 4].map(i => (
-                    <div
-                      key={i}
-                      className="h-1.5 w-1.5 rounded-full bg-amber-500/60 animate-pulse"
-                      style={{ animationDelay: `${i * 150}ms` }}
-                    />
+                    <div key={i} className="h-1.5 w-1.5 rounded-full bg-amber-500/60 animate-pulse"
+                      style={{ animationDelay: `${i * 150}ms` }} />
                   ))}
                 </div>
               </div>
@@ -372,10 +456,11 @@ export default function PublishEpisode() {
           </CardContent>
         </Card>
 
-        {/* ── STEP 2: Review & edit generated content ── */}
+        {/* ── STEP 2: Review & publish ── */}
         {generated && (
           <form onSubmit={handleSubmit}>
             <div className="space-y-5">
+
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent to-amber-900/40" />
                 <span className="font-cinzel text-xs text-amber-600/70 tracking-widest uppercase">
@@ -387,12 +472,12 @@ export default function PublishEpisode() {
               <div className="rounded-lg border border-amber-900/20 bg-amber-900/10 px-4 py-3 flex items-start gap-3">
                 <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="font-garamond text-xs text-muted-foreground leading-relaxed">
-                  Revisa cuidadosamente el contenido generado. Puedes editar cualquier campo.
+                  Revisa el contenido generado. Puedes editar cualquier campo.
                   Contrasta los hechos con las fuentes originales antes de publicar.
                 </p>
               </div>
 
-              {/* Title + date + source */}
+              {/* Title + source */}
               <Card className="border border-amber-900/30 bg-card">
                 <CardContent className="p-4 space-y-3">
                   <div className="space-y-1.5">
@@ -405,35 +490,24 @@ export default function PublishEpisode() {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="font-cinzel text-xs text-amber-500/80">Fecha histórica</Label>
-                      <Input
-                        value={form.date}
-                        onChange={set('date')}
-                        className="bg-background/50 border-border/60 font-garamond"
-                        placeholder="YYYY-MM-DD"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="font-cinzel text-xs text-amber-500/80">Fuente principal</Label>
-                      <Select
-                        value={form.source || 'none'}
-                        onValueChange={v => setForm(f => ({ ...f, source: v === 'none' ? '' : v }))}
-                      >
-                        <SelectTrigger className="bg-background/50 border-border/60 font-garamond">
-                          <SelectValue placeholder="Fuente..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none" className="font-garamond text-muted-foreground">Sin especificar</SelectItem>
-                          {HISTORICAL_SOURCES.map(s => (
-                            <SelectItem key={s.key} value={s.key} className="font-garamond">
-                              {s.tag} — {s.author}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label className="font-cinzel text-xs text-amber-500/80">Fuente principal</Label>
+                    <Select
+                      value={form.source || 'none'}
+                      onValueChange={v => setForm(f => ({ ...f, source: v === 'none' ? '' : v }))}
+                    >
+                      <SelectTrigger className="bg-background/50 border-border/60 font-garamond">
+                        <SelectValue placeholder="Fuente..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="font-garamond text-muted-foreground">Sin especificar</SelectItem>
+                        {HISTORICAL_SOURCES.map(s => (
+                          <SelectItem key={s.key} value={s.key} className="font-garamond">
+                            {s.tag} — {s.author}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
@@ -512,11 +586,8 @@ export default function PublishEpisode() {
                         Se revela tras apostar. Debe citar la fuente.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowAnswer(v => !v)}
-                      className="text-xs text-muted-foreground flex items-center gap-1 hover:text-amber-400 transition-colors"
-                    >
+                    <button type="button" onClick={() => setShowAnswer(v => !v)}
+                      className="text-xs text-muted-foreground flex items-center gap-1 hover:text-amber-400 transition-colors">
                       {showAnswer ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                       {showAnswer ? 'Ocultar' : 'Mostrar'}
                     </button>
@@ -532,7 +603,7 @@ export default function PublishEpisode() {
                 </CardContent>
               </Card>
 
-              {/* Slug preview */}
+              {/* d-tag preview */}
               {form.title && (
                 <div className="text-xs text-muted-foreground font-mono bg-muted/20 px-3 py-2 rounded-md border border-border/30">
                   ID: <span className="text-amber-500">{generateSlug(nextEpisode, form.title)}</span>
@@ -547,14 +618,10 @@ export default function PublishEpisode() {
                   className="flex-1 bg-amber-600 hover:bg-amber-500 text-amber-950 font-cinzel font-bold text-sm gap-2"
                 >
                   <PenLine className="h-4 w-4" />
-                  {isPublishing ? 'Publicando en Nostr...' : `Publicar Episodio #${nextEpisode}`}
+                  {isPublishing ? 'Publicando en Nostr…' : `Publicar Episodio #${nextEpisode}`}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/')}
-                  className="font-cinzel text-sm border-border/60"
-                >
+                <Button type="button" variant="outline" onClick={() => navigate('/')}
+                  className="font-cinzel text-sm border-border/60">
                   Cancelar
                 </Button>
               </div>
