@@ -88,22 +88,10 @@ export function useEpisodes() {
         { signal }
       );
 
-      const now = Date.now() / 1000;
-
       const episodes = events
         .map(parseEpisode)
         .filter((e): e is QuizEpisode => e !== null)
-        .sort((a, b) => {
-          const aRevealed = a.revealAt > 0 && now >= a.revealAt;
-          const bRevealed = b.revealAt > 0 && now >= b.revealAt;
-
-          // Unrevealed (pending/active) always before revealed
-          if (!aRevealed && bRevealed) return -1;
-          if (aRevealed && !bRevealed) return 1;
-
-          // Within the same group, higher episode number first (most recent first)
-          return b.episode - a.episode;
-        });
+        .sort((a, b) => b.episode - a.episode);
 
       return episodes;
     },

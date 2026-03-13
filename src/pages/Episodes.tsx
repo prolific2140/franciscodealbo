@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Anchor, Ship, Scroll, Trophy, Clock,
+  Anchor, Ship, Trophy,
   Users, Coins, ArrowLeft, Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -165,29 +165,6 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
   );
 }
 
-function HistorySkeletons() {
-  return (
-    <div className="space-y-3">
-      {[1, 2, 3].map(i => (
-        <Card key={i} className="border border-amber-900/20">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex gap-2">
-              <Skeleton className="h-4 w-16 rounded" />
-              <Skeleton className="h-4 w-20 rounded" />
-            </div>
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-10 w-full rounded-md" />
-            <div className="flex gap-4">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
 export default function Episodes() {
   useSeoMeta({
     title: 'Episodios — Vuelta al Mundo',
@@ -196,14 +173,9 @@ export default function Episodes() {
 
   const { data: episodes, isLoading, error } = useEpisodes();
 
-  // Partition episodes: unrevealed (active/pending) come first thanks to useEpisodes sort
-  const pending = episodes?.filter(ep => !isRevealed(ep)) ?? [];
+  // Two states only: one active (unrevealed) + resolved history
+  const active = episodes?.find(ep => !isRevealed(ep)) ?? null;
   const resolved = episodes?.filter(ep => isRevealed(ep)) ?? [];
-
-  // The "active" episode is the most recent unrevealed one (index 0 of pending)
-  const active = pending[0] ?? null;
-  // Other unrevealed episodes that are not the active one (older, still open for bets)
-  const otherPending = pending.slice(1);
 
   return (
     <div className="min-h-screen bg-ocean-deep">
@@ -265,7 +237,7 @@ export default function Episodes() {
           </Card>
         )}
 
-        {/* ── ACTIVE EPISODE (most recent unrevealed) ── */}
+        {/* ── ACTIVE EPISODE ── */}
         {active && (
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-5">
@@ -276,24 +248,6 @@ export default function Episodes() {
               <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-900/40" />
             </div>
             <EpisodeQuiz episode={active} />
-          </div>
-        )}
-
-        {/* ── OTHER PENDING EPISODES (open for bets, not yet revealed) ── */}
-        {otherPending.length > 0 && (
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent to-amber-900/30" />
-              <span className="font-cinzel text-[10px] text-amber-600/70 tracking-widest uppercase flex items-center gap-1.5">
-                <Clock className="h-3 w-3" /> Pendientes de resolución
-              </span>
-              <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-900/30" />
-            </div>
-            <div className="space-y-6">
-              {otherPending.map(ep => (
-                <EpisodeQuiz key={ep.event.id} episode={ep} />
-              ))}
-            </div>
           </div>
         )}
 
