@@ -85,17 +85,35 @@ export function useEpisodeAnswers(
 
       const signal = AbortSignal.timeout(8000);
 
+      // We need the episode event to build the 'a' tag for addressable zap lookup
+      const episodeEvents = await nostr.query(
+        [{ kinds: [37183], ids: [episodeEventId], limit: 1 }],
+        { signal }
+      );
+      const episodeEvent = episodeEvents[0];
+      const dTag = episodeEvent?.tags.find(([t]) => t === 'd')?.[1];
+      const aTag = episodeEvent ? `37183:${episodeEvent.pubkey}:${dTag ?? ''}` : null;
+
       // Fetch answer notes AND zap receipts in parallel
-      const [answerEvents, zapEvents] = await Promise.all([
+      // Zaps on addressable events use '#a'; also check '#e' as fallback
+      const zapFilters = aTag
+        ? [{ kinds: [9735], '#a': [aTag], limit: 500 }, { kinds: [9735], '#e': [episodeEventId], limit: 500 }]
+        : [{ kinds: [9735], '#e': [episodeEventId], limit: 500 }];
+
+      const [answerEvents, ...zapBatches] = await Promise.all([
         nostr.query(
           [{ kinds: [1], '#e': [episodeEventId], '#t': ['vuelta-al-mundo'], limit: 500 }],
           { signal }
         ),
-        nostr.query(
-          [{ kinds: [9735], '#e': [episodeEventId], limit: 500 }],
-          { signal }
-        ),
+        ...zapFilters.map(f => nostr.query([f], { signal })),
       ]);
+
+      // Deduplicate zap events by id
+      const zapById = new Map<string, NostrEvent>();
+      for (const batch of zapBatches) {
+        for (const zap of batch) zapById.set(zap.id, zap);
+      }
+      const zapEvents = [...zapById.values()];
 
       const answers = answerEvents.map(parseAnswer);
       const total = answers.length;

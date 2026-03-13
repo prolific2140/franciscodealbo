@@ -353,7 +353,7 @@ export function ZapDialog({ target, children, className, onSuccess }: ZapDialogP
     zap,
   };
 
-  if (!user || user.pubkey === target.pubkey || !author?.metadata?.lud06 && !author?.metadata?.lud16) {
+  if (!user || (!author?.metadata?.lud06 && !author?.metadata?.lud16)) {
     return null;
   }
 

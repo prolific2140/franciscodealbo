@@ -9,12 +9,19 @@ interface ZapDialogWrapperProps {
 }
 
 /**
- * Wraps children in ZapDialog only when the target author has a Lightning
- * address configured. Always renders children regardless, so quiz options
- * are never hidden due to a missing lud06/lud16 on the narrator profile.
+ * Wraps children in ZapDialog when the target author has a Lightning address.
+ * Waits for the author profile to load before deciding — this prevents
+ * discarding the ZapDialog just because the profile hasn't arrived yet.
+ * Always renders children so quiz options are never hidden.
  */
 export function ZapDialogWrapper({ target, onSuccess, children }: ZapDialogWrapperProps) {
-  const { data: targetAuthor } = useAuthor(target.pubkey);
+  const { data: targetAuthor, isLoading } = useAuthor(target.pubkey);
+
+  // While loading, render children without zap wrapper (will re-render once loaded)
+  if (isLoading) {
+    return <>{children}</>;
+  }
+
   const hasLightning = !!(targetAuthor?.metadata?.lud06 || targetAuthor?.metadata?.lud16);
 
   if (!hasLightning) {

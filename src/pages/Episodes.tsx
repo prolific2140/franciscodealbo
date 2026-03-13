@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
 import { Link } from 'react-router-dom';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -10,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Anchor, Ship, Trophy,
-  Users, Coins, ArrowLeft, Zap,
+  Users, Coins, ArrowLeft, Zap, ChevronDown, ChevronUp, ScrollText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { QuizEpisode } from '@/hooks/useEpisodes';
@@ -47,10 +48,8 @@ function QuizSkeleton() {
 }
 
 function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
-  const { data: stats } = useEpisodeAnswers(
-    episode.event.id,
-    episode.answer,
-  );
+  const [open, setOpen] = useState(false);
+  const { data: stats } = useEpisodeAnswers(episode.event.id, episode.answer);
 
   const correctIdx = LETTERS.indexOf(episode.answer);
   const correctLabel = OPTION_LABELS[correctIdx];
@@ -72,82 +71,49 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
       <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
 
       <CardContent className="p-4 space-y-3">
-        {/* Top row */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <Badge className="font-cinzel text-[10px] bg-amber-900/20 text-amber-500 border-amber-800/30">
-                Ep. {episode.episode}
-              </Badge>
-              <span className="text-[10px] font-cinzel text-emerald-400 flex items-center gap-1">
-                <Trophy className="h-2.5 w-2.5" /> Resuelto
+        {/* Top row — always visible */}
+        <button
+          onClick={() => setOpen(v => !v)}
+          className="w-full text-left group"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <Badge className="font-cinzel text-[10px] bg-amber-900/20 text-amber-500 border-amber-800/30">
+                  Ep. {episode.episode}
+                </Badge>
+                <span className="text-[10px] font-cinzel text-emerald-400 flex items-center gap-1">
+                  <Trophy className="h-2.5 w-2.5" /> Resuelto
+                </span>
+              </div>
+              <h3 className="font-cinzel text-sm font-bold text-amber-300 leading-snug group-hover:text-amber-200 transition-colors">
+                {episode.title}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                <Anchor className="h-2.5 w-2.5" />{formattedDate}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {episode.source && <SourceBadge sourceKey={episode.source} />}
+              <span className="text-muted-foreground/50 group-hover:text-amber-500 transition-colors">
+                {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </span>
             </div>
-            <h3 className="font-cinzel text-sm font-bold text-amber-300 leading-snug">{episode.title}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-              <Anchor className="h-2.5 w-2.5" />{formattedDate}
-            </p>
           </div>
-          {episode.source && <SourceBadge sourceKey={episode.source} />}
-        </div>
 
-        {/* Options — read-only, correct answer highlighted */}
-        <div className="space-y-1.5">
-          {LETTERS.map((letter, i) => {
-            const text = episode[OPTION_KEYS[i]];
-            const isCorrect = letter === episode.answer;
-            const optStats = stats?.options[letter];
-            return (
-              <div
-                key={letter}
-                className={cn(
-                  'relative flex items-center gap-2.5 rounded-md border px-3 py-2 overflow-hidden transition-colors',
-                  isCorrect
-                    ? 'border-emerald-600/50 bg-emerald-900/20 text-emerald-200'
-                    : 'border-border/25 bg-card/20 text-muted-foreground/50 opacity-60',
-                )}
-              >
-                {/* Sats fill bar */}
-                {optStats && optStats.satPercent > 0 && (
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      width: `${optStats.satPercent}%`,
-                      background: isCorrect
-                        ? 'linear-gradient(90deg, hsl(142 50% 30% / 0.25), transparent)'
-                        : 'linear-gradient(90deg, hsl(0 40% 30% / 0.15), transparent)',
-                    }}
-                  />
-                )}
-                <span className={cn(
-                  'relative font-cinzel font-bold text-[11px] shrink-0 w-5 h-5 flex items-center justify-center rounded border',
-                  isCorrect
-                    ? 'border-emerald-500 text-emerald-300 bg-emerald-900/40'
-                    : 'border-border/30 text-muted-foreground/40',
-                )}>
-                  {correctLabel === OPTION_LABELS[i] ? correctLabel : OPTION_LABELS[i]}
-                </span>
-                <span className="relative font-garamond text-xs leading-snug flex-1">{text}</span>
-                {optStats && (
-                  <span className="relative text-[10px] text-muted-foreground/60 shrink-0 tabular-nums">
-                    {optStats.count}v · {optStats.sats.toLocaleString()}s
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+          {/* Compact correct-answer pill — shown when collapsed */}
+          {!open && (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-700/40 bg-emerald-900/15 px-2.5 py-1">
+              <span className="font-cinzel font-bold text-[10px] text-emerald-400">{correctLabel}.</span>
+              <span className="font-garamond text-[11px] text-emerald-200/80 truncate max-w-[240px]">
+                {episode[OPTION_KEYS[correctIdx]]}
+              </span>
+            </div>
+          )}
+        </button>
 
-        {/* Explanation */}
-        <div className="rounded-md border border-emerald-800/30 bg-emerald-900/10 px-3 py-2.5">
-          <p className="font-cinzel text-[10px] text-emerald-500 mb-1">Lo que realmente ocurrió</p>
-          <p className="font-garamond text-xs text-emerald-200/80 leading-relaxed line-clamp-3">
-            {episode.answerExplanation}
-          </p>
-        </div>
-
-        {/* Stats row */}
-        <div className="flex items-center gap-4 pt-0.5 border-t border-border/20">
+        {/* Stats row — always visible */}
+        <div className="flex items-center gap-4 border-t border-border/20 pt-2">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Users className="h-3 w-3" /> {stats?.total ?? 0} apuestas
           </span>
@@ -160,6 +126,76 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
             </span>
           )}
         </div>
+
+        {/* Expanded content */}
+        {open && (
+          <div className="space-y-3 pt-1 border-t border-border/15">
+
+            {/* Narrative */}
+            <div className="space-y-1.5">
+              <p className="font-cinzel text-[10px] text-amber-600/70 flex items-center gap-1.5 uppercase tracking-widest">
+                <ScrollText className="h-3 w-3" /> Narración
+              </p>
+              <p className="font-garamond text-sm text-foreground/80 leading-relaxed">
+                {episode.narrative}
+              </p>
+            </div>
+
+            {/* Options — read-only, correct answer highlighted */}
+            <div className="space-y-1.5">
+              {LETTERS.map((letter, i) => {
+                const text = episode[OPTION_KEYS[i]];
+                const isCorrect = letter === episode.answer;
+                const optStats = stats?.options[letter];
+                return (
+                  <div
+                    key={letter}
+                    className={cn(
+                      'relative flex items-center gap-2.5 rounded-md border px-3 py-2 overflow-hidden',
+                      isCorrect
+                        ? 'border-emerald-600/50 bg-emerald-900/20 text-emerald-200'
+                        : 'border-border/25 bg-card/20 text-muted-foreground/50 opacity-60',
+                    )}
+                  >
+                    {optStats && optStats.satPercent > 0 && (
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          width: `${optStats.satPercent}%`,
+                          background: isCorrect
+                            ? 'linear-gradient(90deg, hsl(142 50% 30% / 0.25), transparent)'
+                            : 'linear-gradient(90deg, hsl(0 40% 30% / 0.15), transparent)',
+                        }}
+                      />
+                    )}
+                    <span className={cn(
+                      'relative font-cinzel font-bold text-[11px] shrink-0 w-5 h-5 flex items-center justify-center rounded border',
+                      isCorrect
+                        ? 'border-emerald-500 text-emerald-300 bg-emerald-900/40'
+                        : 'border-border/30 text-muted-foreground/40',
+                    )}>
+                      {OPTION_LABELS[i]}
+                    </span>
+                    <span className="relative font-garamond text-xs leading-snug flex-1">{text}</span>
+                    {optStats && (
+                      <span className="relative text-[10px] text-muted-foreground/60 shrink-0 tabular-nums">
+                        {optStats.count}v · {optStats.sats.toLocaleString()}s
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Explanation */}
+            <div className="rounded-md border border-emerald-800/30 bg-emerald-900/10 px-3 py-2.5">
+              <p className="font-cinzel text-[10px] text-emerald-500 mb-1.5">Lo que realmente ocurrió</p>
+              <p className="font-garamond text-sm text-emerald-200/80 leading-relaxed">
+                {episode.answerExplanation}
+              </p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
