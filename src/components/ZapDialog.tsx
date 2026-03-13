@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, forwardRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useCallback } from 'react';
+import confetti from 'canvas-confetti';
 import { Zap, Copy, Check, ExternalLink, ArrowLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -243,16 +244,38 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
 ));
 ZapContent.displayName = 'ZapContent';
 
+function fireConfetti() {
+  // Burst dorado desde el centro-bajo de la pantalla
+  const burst = (origin: { x: number; y: number }) =>
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin,
+      colors: ['#f59e0b', '#fbbf24', '#fde68a', '#d97706', '#ffffff', '#facc15'],
+      scalar: 1.1,
+      gravity: 0.9,
+      drift: 0.1,
+    });
+
+  burst({ x: 0.5, y: 0.7 });
+  setTimeout(() => burst({ x: 0.35, y: 0.75 }), 120);
+  setTimeout(() => burst({ x: 0.65, y: 0.75 }), 240);
+}
+
 export function ZapDialog({ target, children, className, onSuccess, extraTags }: ZapDialogProps) {
   const [open, setOpen] = useState(false);
   const { user } = useCurrentUser();
   const { data: author } = useAuthor(target.pubkey);
   const { toast } = useToast();
   const { webln, activeNWC } = useWallet();
-  const { zap, isZapping, invoice, setInvoice } = useZaps(target, webln, activeNWC, () => {
+
+  const handleZapSuccess = useCallback(() => {
     setOpen(false);
+    fireConfetti();
     onSuccess?.();
-  }, extraTags);
+  }, [onSuccess]);
+
+  const { zap, isZapping, invoice, setInvoice } = useZaps(target, webln, activeNWC, handleZapSuccess, extraTags);
   const [amount, setAmount] = useState<number | string>(21);
   const [comment, setComment] = useState<string>('');
   const [copied, setCopied] = useState(false);
