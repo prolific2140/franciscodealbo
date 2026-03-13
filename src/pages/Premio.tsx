@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { genUserName } from '@/lib/genUserName';
 import {
   ArrowLeft, Trophy, Zap, Coins, Users,
-  Anchor, ScrollText, Lock, Shuffle, Star, Clock,
+  Anchor, ScrollText, Lock, Star, Clock, Shuffle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -415,6 +415,19 @@ export default function Premio() {
                   <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-900/40" />
                 </div>
                 <ActiveEpisodePanel episode={active} />
+              </div>
+            )}
+
+            {/* ── Botón de sorteo para el narrador ── */}
+            {isNarrator && (
+              <div className="flex justify-center">
+                <Link
+                  to="/realizar-sorteo"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-amber-600/50 bg-amber-500/10 hover:bg-amber-500/20 hover:border-amber-500/80 transition-all font-cinzel text-sm text-amber-300 hover:text-amber-200"
+                >
+                  <Shuffle className="h-4 w-4" />
+                  Realizar sorteo
+                </Link>
               </div>
             )}
 

@@ -132,6 +132,48 @@ export function useZaps(
     return { zapCount: count, totalSats: sats, zaps: zapEvents };
   }, [zapEvents, actualTarget]);
 
+  // Poll for a zap receipt matching our invoice (for external wallet payments)
+  const pollForReceipt = useCallback(async (
+    invoiceStr: string,
+    targetId: string,
+    aCoord: string | null,
+    onPaid: () => void,
+  ) => {
+    const maxAttempts = 40; // poll for up to ~2 minutes
+    let attempts = 0;
+
+    const check = async () => {
+      attempts++;
+      if (attempts > maxAttempts) return;
+
+      try {
+        const filters: Parameters<typeof nostr.query>[0] = aCoord
+          ? [{ kinds: [9735], '#a': [aCoord], limit: 20 }, { kinds: [9735], '#e': [targetId], limit: 20 }]
+          : [{ kinds: [9735], '#e': [targetId], limit: 20 }];
+
+        const receipts = await Promise.all(
+          filters.map(f => nostr.query(f, { signal: AbortSignal.timeout(4000) }))
+        );
+        const all = receipts.flat();
+
+        // Check if any receipt contains our bolt11 invoice
+        const found = all.some(r =>
+          r.tags.find(([t, v]) => t === 'bolt11' && v === invoiceStr)
+        );
+
+        if (found) {
+          onPaid();
+        } else {
+          setTimeout(check, 3000);
+        }
+      } catch {
+        setTimeout(check, 3000);
+      }
+    };
+
+    setTimeout(check, 3000);
+  }, [nostr]);
+
   const zap = async (amount: number, comment: string) => {
     if (amount <= 0) {
       return;
@@ -142,8 +184,8 @@ export function useZaps(
 
     if (!user) {
       toast({
-        title: 'Login required',
-        description: 'You must be logged in to send a zap.',
+        title: 'Sesión requerida',
+        description: 'Debes iniciar sesión para enviar un zap.',
         variant: 'destructive',
       });
       setIsZapping(false);
@@ -152,8 +194,8 @@ export function useZaps(
 
     if (!actualTarget) {
       toast({
-        title: 'Event not found',
-        description: 'Could not find the event to zap.',
+        title: 'Evento no encontrado',
+        description: 'No se pudo encontrar el evento.',
         variant: 'destructive',
       });
       setIsZapping(false);
@@ -161,10 +203,10 @@ export function useZaps(
     }
 
     try {
-      if (!author.data || !author.data?.metadata || !author.data?.event ) {
+      if (!author.data || !author.data?.metadata || !author.data?.event) {
         toast({
-          title: 'Author not found',
-          description: 'Could not find the author of this item.',
+          title: 'Perfil no encontrado',
+          description: 'No se pudo encontrar el autor del evento.',
           variant: 'destructive',
         });
         setIsZapping(false);
@@ -174,20 +216,19 @@ export function useZaps(
       const { lud06, lud16 } = author.data.metadata;
       if (!lud06 && !lud16) {
         toast({
-          title: 'Lightning address not found',
-          description: 'The author does not have a lightning address configured.',
+          title: 'Sin dirección Lightning',
+          description: 'El autor no tiene una dirección Lightning configurada.',
           variant: 'destructive',
         });
         setIsZapping(false);
         return;
       }
 
-      // Get zap endpoint using the old reliable method
       const zapEndpoint = await nip57.getZapEndpoint(author.data.event);
       if (!zapEndpoint) {
         toast({
-          title: 'Zap endpoint not found',
-          description: 'Could not find a zap endpoint for the author.',
+          title: 'Endpoint de zap no encontrado',
+          description: 'No se pudo contactar con el servidor Lightning del autor.',
           variant: 'destructive',
         });
         setIsZapping(false);
@@ -238,91 +279,76 @@ export function useZaps(
             // Get the current active NWC connection dynamically
             const currentNWCConnection = getActiveConnection();
 
+            // Helper: mark payment as successful
+            const handleSuccess = () => {
+              setIsZapping(false);
+              setInvoice(null);
+              queryClient.invalidateQueries({ queryKey: ['nostr', 'zaps'] });
+              queryClient.invalidateQueries({ queryKey: ['vuelta-al-mundo', 'answers'] });
+              onZapSuccess?.();
+            };
+
+            // Build coord for polling
+            const aCoord = (actualTarget.kind >= 30000 && actualTarget.kind < 40000)
+              ? `${actualTarget.kind}:${actualTarget.pubkey}:${actualTarget.tags.find(([t]) => t === 'd')?.[1] ?? ''}`
+              : null;
+
             // Try NWC first if available and properly connected
             if (currentNWCConnection && currentNWCConnection.connectionString && currentNWCConnection.isConnected) {
               try {
                 await sendPayment(currentNWCConnection, newInvoice);
-
-                // Clear states immediately on success
-                setIsZapping(false);
-                setInvoice(null);
-
-                toast({
-                  title: 'Zap successful!',
-                  description: `You sent ${amount} sats via NWC to the author.`,
-                });
-
-                // Invalidate zap queries to refresh counts
-                queryClient.invalidateQueries({ queryKey: ['nostr', 'zaps'] });
-
-                // Close dialog last to ensure clean state
-                onZapSuccess?.();
+                toast({ title: '⚡ ¡Apuesta registrada!', description: `Enviaste ${amount} sats mediante NWC.` });
+                handleSuccess();
                 return;
               } catch (nwcError) {
-                console.error('NWC payment failed, falling back:', nwcError);
-
-                // Show specific NWC error to user for debugging
-                const errorMessage = nwcError instanceof Error ? nwcError.message : 'Unknown NWC error';
+                const errorMessage = nwcError instanceof Error ? nwcError.message : 'Error NWC desconocido';
                 toast({
-                  title: 'NWC payment failed',
-                  description: `${errorMessage}. Falling back to other payment methods...`,
+                  title: 'Pago NWC fallido',
+                  description: `${errorMessage}. Intenta con otra cartera.`,
                   variant: 'destructive',
                 });
               }
             }
 
-            if (webln) {  // Try WebLN next
+            if (webln) {
               try {
-                // For native WebLN, we may need to enable it first
                 let webLnProvider = webln;
                 if (webln.enable && typeof webln.enable === 'function') {
                   const enabledProvider = await webln.enable();
-                  // Some implementations return the provider, others return void
-                  // Cast to WebLNProvider to handle both cases
                   const provider = enabledProvider as WebLNProvider | undefined;
-                  if (provider) {
-                    webLnProvider = provider;
-                  }
+                  if (provider) webLnProvider = provider;
                 }
-
                 await webLnProvider.sendPayment(newInvoice);
-
-                // Clear states immediately on success
-                setIsZapping(false);
-                setInvoice(null);
-
-                toast({
-                  title: 'Zap successful!',
-                  description: `You sent ${amount} sats to the author.`,
-                });
-
-                // Invalidate zap queries to refresh counts
-                queryClient.invalidateQueries({ queryKey: ['nostr', 'zaps'] });
-
-                // Close dialog last to ensure clean state
-                onZapSuccess?.();
+                toast({ title: '⚡ ¡Apuesta registrada!', description: `Enviaste ${amount} sats.` });
+                handleSuccess();
               } catch (weblnError) {
-                console.error('WebLN payment failed, falling back:', weblnError);
-
-                // Show specific WebLN error to user for debugging
-                const errorMessage = weblnError instanceof Error ? weblnError.message : 'Unknown WebLN error';
+                const errorMessage = weblnError instanceof Error ? weblnError.message : 'Error WebLN desconocido';
                 toast({
-                  title: 'WebLN payment failed',
-                  description: `${errorMessage}. Falling back to other payment methods...`,
+                  title: 'Pago WebLN fallido',
+                  description: `${errorMessage}. Escanea el código QR con tu cartera.`,
                   variant: 'destructive',
                 });
-
                 setInvoice(newInvoice);
                 setIsZapping(false);
+                // Poll for receipt in case they pay manually after WebLN fails
+                pollForReceipt(newInvoice, actualTarget.id, aCoord, () => {
+                  toast({ title: '⚡ ¡Pago confirmado!', description: `${amount} sats recibidos.` });
+                  handleSuccess();
+                });
               }
-            } else { // Default - show QR code and manual Lightning URI
+            } else {
+              // No WebLN/NWC — show QR and poll for receipt
               setInvoice(newInvoice);
               setIsZapping(false);
+              pollForReceipt(newInvoice, actualTarget.id, aCoord, () => {
+                toast({ title: '⚡ ¡Pago confirmado!', description: `${amount} sats recibidos. ¡Buena suerte!` });
+                handleSuccess();
+              });
             }
           } catch (err) {
             console.error('Zap error:', err);
             toast({
-              title: 'Zap failed',
+              title: 'Error al zapear',
               description: (err as Error).message,
               variant: 'destructive',
             });
@@ -331,7 +357,7 @@ export function useZaps(
     } catch (err) {
       console.error('Zap error:', err);
       toast({
-        title: 'Zap failed',
+        title: 'Error al zapear',
         description: (err as Error).message,
         variant: 'destructive',
       });

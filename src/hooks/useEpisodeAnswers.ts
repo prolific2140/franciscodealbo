@@ -52,6 +52,12 @@ export interface OptionStats {
   satPercent: number;
 }
 
+export interface Participant {
+  pubkey: string;
+  letter: 'a' | 'b' | 'c' | 'd' | null;
+  sats: number;
+}
+
 export interface AnswerStats {
   total: number;
   totalSats: number;
@@ -60,6 +66,8 @@ export interface AnswerStats {
   answers: EpisodeAnswer[];
   /** pubkeys that answered correctly */
   winners: string[];
+  /** all participants with their option and sats */
+  participants: Participant[];
 }
 
 function emptyStats(): AnswerStats {
@@ -69,6 +77,7 @@ function emptyStats(): AnswerStats {
     options: { a: opt(), b: opt(), c: opt(), d: opt() },
     answers: [],
     winners: [],
+    participants: [],
   };
 }
 
@@ -233,7 +242,13 @@ export function useEpisodeAnswers(
         ? [...participantMap.entries()].filter(([, v]) => v.letter === correctAnswer).map(([pk]) => pk)
         : [];
 
-      return { total, totalSats, winnerSats, options, answers, winners };
+      const participants: Participant[] = [...participantMap.entries()].map(([pubkey, { letter, sats }]) => ({
+        pubkey,
+        letter,
+        sats,
+      }));
+
+      return { total, totalSats, winnerSats, options, answers, winners, participants };
     },
     enabled: !!episodeEventId,
     staleTime: 30000,
