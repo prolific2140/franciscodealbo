@@ -75,6 +75,8 @@ function emptyStats(): AnswerStats {
 export function useEpisodeAnswers(
   episodeEventId: string | undefined,
   correctAnswer?: 'a' | 'b' | 'c' | 'd',
+  /** Pre-built 'a' tag coordinate (37183:pubkey:d) to avoid an extra relay query */
+  aTagCoordinate?: string,
 ) {
   const { nostr } = useNostr();
 
@@ -85,27 +87,32 @@ export function useEpisodeAnswers(
 
       const signal = AbortSignal.timeout(8000);
 
-      // We need the episode event to build the 'a' tag for addressable zap lookup
-      const episodeEvents = await nostr.query(
-        [{ kinds: [37183], ids: [episodeEventId], limit: 1 }],
-        { signal }
-      );
-      const episodeEvent = episodeEvents[0];
-      const dTag = episodeEvent?.tags.find(([t]) => t === 'd')?.[1];
-      const aTag = episodeEvent ? `37183:${episodeEvent.pubkey}:${dTag ?? ''}` : null;
+      // Build the 'a' tag coordinate for addressable zap lookup.
+      // Use the pre-built one if provided; otherwise fetch the episode event.
+      let aTag: string | null = aTagCoordinate ?? null;
+      if (!aTag) {
+        const episodeEvents = await nostr.query(
+          [{ kinds: [37183], ids: [episodeEventId], limit: 1 }],
+          { signal }
+        );
+        const episodeEvent = episodeEvents[0];
+        if (episodeEvent) {
+          const dTag = episodeEvent.tags.find(([t]) => t === 'd')?.[1];
+          aTag = `37183:${episodeEvent.pubkey}:${dTag ?? ''}`;
+        }
+      }
 
-      // Fetch answer notes AND zap receipts in parallel
-      // Zaps on addressable events use '#a'; also check '#e' as fallback
-      const zapFilters = aTag
-        ? [{ kinds: [9735], '#a': [aTag], limit: 500 }, { kinds: [9735], '#e': [episodeEventId], limit: 500 }]
-        : [{ kinds: [9735], '#e': [episodeEventId], limit: 500 }];
-
+      // Fetch answer notes AND zap receipts in parallel.
+      // Zaps on addressable events use '#a'; also check '#e' as fallback.
       const [answerEvents, ...zapBatches] = await Promise.all([
         nostr.query(
           [{ kinds: [1], '#e': [episodeEventId], '#t': ['vuelta-al-mundo'], limit: 500 }],
           { signal }
         ),
-        ...zapFilters.map(f => nostr.query([f], { signal })),
+        aTag
+          ? nostr.query([{ kinds: [9735], '#a': [aTag], limit: 500 }], { signal })
+          : Promise.resolve([] as NostrEvent[]),
+        nostr.query([{ kinds: [9735], '#e': [episodeEventId], limit: 500 }], { signal }),
       ]);
 
       // Deduplicate zap events by id
@@ -115,43 +122,103 @@ export function useEpisodeAnswers(
       }
       const zapEvents = [...zapById.values()];
 
-      const answers = answerEvents.map(parseAnswer);
-      const total = answers.length;
+      const validLetters = new Set<string>(['a', 'b', 'c', 'd']);
 
-      // Map each pubkey to their chosen letter (first answer wins)
-      const pubkeyToLetter = new Map<string, 'a' | 'b' | 'c' | 'd'>();
-      for (const a of answers) {
-        if (a.answerLetter && !pubkeyToLetter.has(a.event.pubkey)) {
-          pubkeyToLetter.set(a.event.pubkey, a.answerLetter);
-        }
+      // ── Primary source: zap receipts ──────────────────────────────────────
+      // Each zap receipt carries the signed zap request in its `description`
+      // tag. That request includes a `t: answer:X` tag injected by the client.
+      // We read the option from there so the answer is self-contained in the zap.
+
+      interface ZapRecord {
+        zapperPubkey: string;
+        letter: 'a' | 'b' | 'c' | 'd' | null;
+        sats: number;
       }
 
-      // Aggregate sats per option
-      const satsByOption: Record<'a' | 'b' | 'c' | 'd', number> = { a: 0, b: 0, c: 0, d: 0 };
-      let totalSats = 0;
+      const zapRecords: ZapRecord[] = [];
+
+      // Keep only the most-recent zap per pubkey (one zap = one vote per person)
+      const latestZapByPubkey = new Map<string, { letter: 'a' | 'b' | 'c' | 'd' | null; sats: number; createdAt: number }>();
 
       for (const zap of zapEvents) {
         const sats = extractSatsFromZap(zap);
         if (sats <= 0) continue;
-        totalSats += sats;
 
-        // Find zapper pubkey from the description field
         const descStr = zap.tags.find(([n]) => n === 'description')?.[1];
-        if (descStr) {
-          try {
-            const zapReq = JSON.parse(descStr) as NostrEvent;
-            const zapperPubkey = zapReq.pubkey;
-            const letter = pubkeyToLetter.get(zapperPubkey);
-            if (letter) {
-              satsByOption[letter] += sats;
-            }
-          } catch { /* ignore */ }
+        if (!descStr) continue;
+
+        let zapperPubkey: string | undefined;
+        let letter: 'a' | 'b' | 'c' | 'd' | null = null;
+
+        try {
+          const zapReq = JSON.parse(descStr) as NostrEvent;
+          zapperPubkey = zapReq.pubkey;
+
+          // Read the answer tag from the zap request
+          const answerTag = zapReq.tags?.find(([t, v]: string[]) => t === 't' && v?.startsWith('answer:'));
+          const rawLetter = answerTag?.[1]?.replace('answer:', '');
+          if (rawLetter && validLetters.has(rawLetter)) {
+            letter = rawLetter as 'a' | 'b' | 'c' | 'd';
+          }
+        } catch { /* ignore malformed description */ }
+
+        if (!zapperPubkey) continue;
+
+        const existing = latestZapByPubkey.get(zapperPubkey);
+        if (!existing || zap.created_at > existing.createdAt) {
+          latestZapByPubkey.set(zapperPubkey, { letter, sats, createdAt: zap.created_at });
         }
       }
 
-      const countByOption = { a: 0, b: 0, c: 0, d: 0 } as Record<'a' | 'b' | 'c' | 'd', number>;
-      for (const [, letter] of pubkeyToLetter) countByOption[letter]++;
+      for (const [pubkey, { letter, sats }] of latestZapByPubkey) {
+        zapRecords.push({ zapperPubkey: pubkey, letter, sats });
+      }
 
+      // ── Fallback: kind-1 answer notes (for users without Lightning) ───────
+      // These let us count participants who answered but didn't zap.
+      const answers = answerEvents.map(parseAnswer);
+
+      // Build pubkey→letter from kind-1 notes (first note wins)
+      const pubkeyToLetterFromNotes = new Map<string, 'a' | 'b' | 'c' | 'd'>();
+      for (const a of answers) {
+        if (a.answerLetter && !pubkeyToLetterFromNotes.has(a.event.pubkey)) {
+          pubkeyToLetterFromNotes.set(a.event.pubkey, a.answerLetter);
+        }
+      }
+
+      // ── Merge: zap records are authoritative; notes fill gaps ─────────────
+      // Build the final pubkey→{letter, sats} map
+      const participantMap = new Map<string, { letter: 'a' | 'b' | 'c' | 'd' | null; sats: number }>();
+
+      // First: everyone who zapped
+      for (const rec of zapRecords) {
+        participantMap.set(rec.zapperPubkey, { letter: rec.letter, sats: rec.sats });
+      }
+
+      // Then: anyone who answered via kind-1 but did NOT zap
+      for (const [pubkey, letter] of pubkeyToLetterFromNotes) {
+        if (!participantMap.has(pubkey)) {
+          participantMap.set(pubkey, { letter, sats: 0 });
+        } else if (participantMap.get(pubkey)!.letter === null) {
+          // Zapped but without answer tag — fill letter from kind-1 note
+          participantMap.get(pubkey)!.letter = letter;
+        }
+      }
+
+      // ── Aggregate by option ───────────────────────────────────────────────
+      const countByOption: Record<'a' | 'b' | 'c' | 'd', number> = { a: 0, b: 0, c: 0, d: 0 };
+      const satsByOption: Record<'a' | 'b' | 'c' | 'd', number> = { a: 0, b: 0, c: 0, d: 0 };
+      let totalSats = 0;
+
+      for (const { letter, sats } of participantMap.values()) {
+        totalSats += sats;
+        if (letter) {
+          countByOption[letter]++;
+          satsByOption[letter] += sats;
+        }
+      }
+
+      const total = participantMap.size;
       const pct = (n: number, t: number) => t > 0 ? Math.round((n / t) * 100) : 0;
 
       const options: Record<'a' | 'b' | 'c' | 'd', OptionStats> = {
@@ -163,7 +230,7 @@ export function useEpisodeAnswers(
 
       const winnerSats = correctAnswer ? satsByOption[correctAnswer] : 0;
       const winners = correctAnswer
-        ? [...pubkeyToLetter.entries()].filter(([, l]) => l === correctAnswer).map(([pk]) => pk)
+        ? [...participantMap.entries()].filter(([, v]) => v.letter === correctAnswer).map(([pk]) => pk)
         : [];
 
       return { total, totalSats, winnerSats, options, answers, winners };
@@ -174,7 +241,11 @@ export function useEpisodeAnswers(
   });
 }
 
-export function useUserAnswer(episodeEventId: string | undefined, userPubkey: string | undefined) {
+export function useUserAnswer(
+  episodeEventId: string | undefined,
+  userPubkey: string | undefined,
+  aTagCoordinate?: string,
+) {
   const { nostr } = useNostr();
 
   return useQuery({
@@ -183,13 +254,48 @@ export function useUserAnswer(episodeEventId: string | undefined, userPubkey: st
       if (!episodeEventId || !userPubkey) return null;
 
       const signal = AbortSignal.timeout(5000);
-      const events = await nostr.query(
-        [{ kinds: [1], authors: [userPubkey], '#e': [episodeEventId], '#t': ['vuelta-al-mundo'], limit: 1 }],
-        { signal }
-      );
+      const validLetters = new Set<string>(['a', 'b', 'c', 'd']);
 
-      if (!events.length) return null;
-      return parseAnswer(events[0]);
+      // Check zap receipts first — the user may have zapped without publishing a kind 1
+      const zapFilters: Parameters<typeof nostr.query>[0] = aTagCoordinate
+        ? [{ kinds: [9735], '#a': [aTagCoordinate], '#P': [userPubkey], limit: 10 },
+           { kinds: [9735], '#e': [episodeEventId], '#P': [userPubkey], limit: 10 }]
+        : [{ kinds: [9735], '#e': [episodeEventId], '#P': [userPubkey], limit: 10 }];
+
+      const [noteEvents, ...zapBatches] = await Promise.all([
+        nostr.query(
+          [{ kinds: [1], authors: [userPubkey], '#e': [episodeEventId], '#t': ['vuelta-al-mundo'], limit: 1 }],
+          { signal }
+        ),
+        ...zapFilters.map(f => nostr.query(f, { signal })),
+      ]);
+
+      // Deduplicate zaps
+      const zapById = new Map<string, NostrEvent>();
+      for (const batch of zapBatches) for (const z of batch) zapById.set(z.id, z);
+      const userZaps = [...zapById.values()];
+
+      // Try to extract answer from zap description
+      for (const zap of userZaps) {
+        const descStr = zap.tags.find(([n]) => n === 'description')?.[1];
+        if (!descStr) continue;
+        try {
+          const zapReq = JSON.parse(descStr) as NostrEvent;
+          const answerTag = zapReq.tags?.find(([t, v]: string[]) => t === 't' && v?.startsWith('answer:'));
+          const rawLetter = answerTag?.[1]?.replace('answer:', '');
+          if (rawLetter && validLetters.has(rawLetter)) {
+            return {
+              event: zap,
+              answerLetter: rawLetter as 'a' | 'b' | 'c' | 'd',
+              comment: zapReq.content ?? '',
+            };
+          }
+        } catch { /* ignore */ }
+      }
+
+      // Fallback: kind-1 note
+      if (!noteEvents.length) return null;
+      return parseAnswer(noteEvents[0]);
     },
     enabled: !!episodeEventId && !!userPubkey,
     staleTime: 30000,

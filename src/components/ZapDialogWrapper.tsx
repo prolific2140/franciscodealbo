@@ -6,6 +6,8 @@ interface ZapDialogWrapperProps {
   target: Event;
   onSuccess: () => void;
   children: React.ReactNode;
+  /** Extra tags to embed in the zap request (e.g. answer letter) */
+  extraTags?: string[][];
 }
 
 /**
@@ -14,7 +16,7 @@ interface ZapDialogWrapperProps {
  * discarding the ZapDialog just because the profile hasn't arrived yet.
  * Always renders children so quiz options are never hidden.
  */
-export function ZapDialogWrapper({ target, onSuccess, children }: ZapDialogWrapperProps) {
+export function ZapDialogWrapper({ target, onSuccess, children, extraTags }: ZapDialogWrapperProps) {
   const { data: targetAuthor, isLoading } = useAuthor(target.pubkey);
 
   // While loading, render children without zap wrapper (will re-render once loaded)
@@ -29,7 +31,7 @@ export function ZapDialogWrapper({ target, onSuccess, children }: ZapDialogWrapp
   }
 
   return (
-    <ZapDialog target={target} onSuccess={onSuccess}>
+    <ZapDialog target={target} onSuccess={onSuccess} extraTags={extraTags}>
       {children}
     </ZapDialog>
   );

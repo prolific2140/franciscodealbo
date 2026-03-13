@@ -41,6 +41,8 @@ interface ZapDialogProps {
   className?: string;
   /** Called immediately after a successful zap payment */
   onSuccess?: () => void;
+  /** Extra tags to embed in the zap request (e.g. answer letter) */
+  extraTags?: string[][];
 }
 
 const presetAmounts = [
@@ -237,7 +239,7 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
 ));
 ZapContent.displayName = 'ZapContent';
 
-export function ZapDialog({ target, children, className, onSuccess }: ZapDialogProps) {
+export function ZapDialog({ target, children, className, onSuccess, extraTags }: ZapDialogProps) {
   const [open, setOpen] = useState(false);
   const { user } = useCurrentUser();
   const { data: author } = useAuthor(target.pubkey);
@@ -246,7 +248,7 @@ export function ZapDialog({ target, children, className, onSuccess }: ZapDialogP
   const { zap, isZapping, invoice, setInvoice } = useZaps(target, webln, activeNWC, () => {
     setOpen(false);
     onSuccess?.();
-  });
+  }, extraTags);
   const [amount, setAmount] = useState<number | string>(100);
   const [comment, setComment] = useState<string>('');
   const [copied, setCopied] = useState(false);

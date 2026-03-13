@@ -16,7 +16,9 @@ export function useZaps(
   target: Event | Event[],
   webln: WebLNProvider | null,
   _nwcConnection: NWCConnection | null,
-  onZapSuccess?: () => void
+  onZapSuccess?: () => void,
+  /** Optional extra tags to embed in the zap request (e.g. [['t','answer:a']]) */
+  extraTags?: string[][]
 ) {
   const { nostr } = useNostr();
   const { toast } = useToast();
@@ -208,6 +210,11 @@ export function useZaps(
         relays: config.relayMetadata.relays.map(r => r.url),
         comment
       });
+
+      // Inject extra tags (e.g. answer letter) into the zap request
+      if (extraTags && extraTags.length > 0) {
+        zapRequest.tags = [...zapRequest.tags, ...extraTags];
+      }
 
       // Sign the zap request (but don't publish to relays - only send to LNURL endpoint)
       if (!user.signer) {

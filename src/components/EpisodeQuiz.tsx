@@ -44,8 +44,9 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
   const { data: stats, isLoading: statsLoading } = useEpisodeAnswers(
     episode.event.id,
     revealed ? episode.answer : undefined,
+    aTag,
   );
-  const { data: userAnswer } = useUserAnswer(episode.event.id, user?.pubkey);
+  const { data: userAnswer } = useUserAnswer(episode.event.id, user?.pubkey, aTag);
 
   const authorMeta = author.data?.metadata;
   const displayName = authorMeta?.name ?? genUserName(episode.event.pubkey);
@@ -290,6 +291,7 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
                     key={letter}
                     target={episode.event as Event}
                     onSuccess={() => onZapSuccess(letter)}
+                    extraTags={[['t', `answer:${letter}`]]}
                   >
                     {optionEl}
                   </ZapDialogWrapper>

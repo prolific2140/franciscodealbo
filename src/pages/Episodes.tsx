@@ -49,7 +49,8 @@ function QuizSkeleton() {
 
 function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
   const [open, setOpen] = useState(false);
-  const { data: stats } = useEpisodeAnswers(episode.event.id, episode.answer);
+  const aTag = `37183:${episode.event.pubkey}:${episode.d}`;
+  const { data: stats } = useEpisodeAnswers(episode.event.id, episode.answer, aTag);
 
   const correctIdx = LETTERS.indexOf(episode.answer);
   const correctLabel = OPTION_LABELS[correctIdx];
