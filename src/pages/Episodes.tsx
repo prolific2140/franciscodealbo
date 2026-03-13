@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Anchor, Ship, Scroll, Trophy, Clock,
-  Users, Coins, ArrowLeft,
+  Users, Coins, ArrowLeft, Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { QuizEpisode } from '@/hooks/useEpisodes';
@@ -47,14 +47,12 @@ function QuizSkeleton() {
 }
 
 function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
-  const revealed = isRevealed(episode);
   const { data: stats } = useEpisodeAnswers(
     episode.event.id,
-    revealed ? episode.answer : undefined,
+    episode.answer,
   );
 
   const correctIdx = LETTERS.indexOf(episode.answer);
-  const correctText = episode[OPTION_KEYS[correctIdx]];
   const correctLabel = OPTION_LABELS[correctIdx];
 
   const formattedDate = (() => {
@@ -65,78 +63,103 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
     } catch { return episode.date; }
   })();
 
-  const revealDate = (() => {
-    if (!episode.revealAt) return null;
-    try {
-      return new Date(episode.revealAt * 1000).toLocaleDateString('es-ES', {
-        year: 'numeric', month: 'long', day: 'numeric',
-      });
-    } catch { return null; }
-  })();
+  const totalSats = stats?.totalSats ?? 0;
+  const winnerCount = stats?.winners.length ?? 0;
 
   return (
-    <Card className={cn(
-      'border overflow-hidden',
-      revealed ? 'border-emerald-900/30' : 'border-amber-900/20',
-    )}>
-      <div className={cn('h-px', revealed
-        ? 'bg-gradient-to-r from-transparent via-emerald-600/40 to-transparent'
-        : 'bg-gradient-to-r from-transparent via-amber-800/30 to-transparent'
-      )} />
+    <Card className="border border-emerald-900/30 overflow-hidden">
+      {/* Luminous green top accent */}
+      <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+
       <CardContent className="p-4 space-y-3">
         {/* Top row */}
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Badge className="font-cinzel text-[10px] bg-amber-900/20 text-amber-500 border-amber-800/30">
                 Ep. {episode.episode}
               </Badge>
-              {revealed
-                ? <span className="text-[10px] font-cinzel text-emerald-500 flex items-center gap-1"><Trophy className="h-2.5 w-2.5" /> Resuelto</span>
-                : <span className="text-[10px] font-cinzel text-amber-600 flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> Pendiente</span>}
+              <span className="text-[10px] font-cinzel text-emerald-400 flex items-center gap-1">
+                <Trophy className="h-2.5 w-2.5" /> Resuelto
+              </span>
             </div>
             <h3 className="font-cinzel text-sm font-bold text-amber-300 leading-snug">{episode.title}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><Anchor className="h-2.5 w-2.5" />{formattedDate}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+              <Anchor className="h-2.5 w-2.5" />{formattedDate}
+            </p>
           </div>
           {episode.source && <SourceBadge sourceKey={episode.source} />}
         </div>
 
-        {/* Correct answer (only shown when revealed) */}
-        {revealed && (
-          <div className="rounded-md border border-emerald-800/40 bg-emerald-900/15 px-3 py-2">
-            <p className="font-cinzel text-[10px] text-emerald-500 mb-1">Respuesta correcta</p>
-            <p className="font-garamond text-sm text-emerald-200">
-              <span className="font-bold">{correctLabel}.</span> {correctText}
-            </p>
-          </div>
-        )}
+        {/* Options — read-only, correct answer highlighted */}
+        <div className="space-y-1.5">
+          {LETTERS.map((letter, i) => {
+            const text = episode[OPTION_KEYS[i]];
+            const isCorrect = letter === episode.answer;
+            const optStats = stats?.options[letter];
+            return (
+              <div
+                key={letter}
+                className={cn(
+                  'relative flex items-center gap-2.5 rounded-md border px-3 py-2 overflow-hidden transition-colors',
+                  isCorrect
+                    ? 'border-emerald-600/50 bg-emerald-900/20 text-emerald-200'
+                    : 'border-border/25 bg-card/20 text-muted-foreground/50 opacity-60',
+                )}
+              >
+                {/* Sats fill bar */}
+                {optStats && optStats.satPercent > 0 && (
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      width: `${optStats.satPercent}%`,
+                      background: isCorrect
+                        ? 'linear-gradient(90deg, hsl(142 50% 30% / 0.25), transparent)'
+                        : 'linear-gradient(90deg, hsl(0 40% 30% / 0.15), transparent)',
+                    }}
+                  />
+                )}
+                <span className={cn(
+                  'relative font-cinzel font-bold text-[11px] shrink-0 w-5 h-5 flex items-center justify-center rounded border',
+                  isCorrect
+                    ? 'border-emerald-500 text-emerald-300 bg-emerald-900/40'
+                    : 'border-border/30 text-muted-foreground/40',
+                )}>
+                  {correctLabel === OPTION_LABELS[i] ? correctLabel : OPTION_LABELS[i]}
+                </span>
+                <span className="relative font-garamond text-xs leading-snug flex-1">{text}</span>
+                {optStats && (
+                  <span className="relative text-[10px] text-muted-foreground/60 shrink-0 tabular-nums">
+                    {optStats.count}v · {optStats.sats.toLocaleString()}s
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-        {/* Pending reveal */}
-        {!revealed && revealDate && (
-          <div className="rounded-md border border-amber-900/25 bg-amber-900/10 px-3 py-2">
-            <p className="font-garamond text-xs text-muted-foreground flex items-center gap-1.5">
-              <Clock className="h-3 w-3 text-amber-600" />
-              Respuesta el {revealDate}
-            </p>
-          </div>
-        )}
+        {/* Explanation */}
+        <div className="rounded-md border border-emerald-800/30 bg-emerald-900/10 px-3 py-2.5">
+          <p className="font-cinzel text-[10px] text-emerald-500 mb-1">Lo que realmente ocurrió</p>
+          <p className="font-garamond text-xs text-emerald-200/80 leading-relaxed line-clamp-3">
+            {episode.answerExplanation}
+          </p>
+        </div>
 
         {/* Stats row */}
-        {stats && (
-          <div className="flex items-center gap-4 pt-1 border-t border-border/20">
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Users className="h-3 w-3" /> {stats.total} apuestas
+        <div className="flex items-center gap-4 pt-0.5 border-t border-border/20">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="h-3 w-3" /> {stats?.total ?? 0} apuestas
+          </span>
+          <span className="flex items-center gap-1 text-xs text-amber-600/70">
+            <Coins className="h-3 w-3" /> {totalSats.toLocaleString()} sats
+          </span>
+          {winnerCount > 0 && (
+            <span className="flex items-center gap-1 text-xs text-emerald-500">
+              <Trophy className="h-3 w-3" /> {winnerCount} ganador{winnerCount !== 1 ? 'es' : ''}
             </span>
-            <span className="flex items-center gap-1 text-xs text-amber-600/70">
-              <Coins className="h-3 w-3" /> {stats.totalSats.toLocaleString()} sats
-            </span>
-            {revealed && stats.winners.length > 0 && (
-              <span className="flex items-center gap-1 text-xs text-emerald-500">
-                <Trophy className="h-3 w-3" /> {stats.winners.length} ganador{stats.winners.length !== 1 ? 'es' : ''}
-              </span>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -172,8 +195,15 @@ export default function Episodes() {
   });
 
   const { data: episodes, isLoading, error } = useEpisodes();
-  const active = episodes?.[0] ?? null;
-  const past = episodes ? episodes.slice(1) : [];
+
+  // Partition episodes: unrevealed (active/pending) come first thanks to useEpisodes sort
+  const pending = episodes?.filter(ep => !isRevealed(ep)) ?? [];
+  const resolved = episodes?.filter(ep => isRevealed(ep)) ?? [];
+
+  // The "active" episode is the most recent unrevealed one (index 0 of pending)
+  const active = pending[0] ?? null;
+  // Other unrevealed episodes that are not the active one (older, still open for bets)
+  const otherPending = pending.slice(1);
 
   return (
     <div className="min-h-screen bg-ocean-deep">
@@ -188,7 +218,6 @@ export default function Episodes() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70" />
         <div className="absolute inset-0 bg-ocean-deep/30" />
-        {/* Title overlay */}
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 px-4 text-center">
           <h1 className="font-cinzel text-2xl sm:text-3xl font-bold text-amber-300 drop-shadow-xl mb-1">
             Bitácora de Episodios
@@ -209,10 +238,6 @@ export default function Episodes() {
           <ArrowLeft className="h-3.5 w-3.5" /> Volver al inicio
         </Link>
 
-        {/* (header now in hero) */}
-        <div>
-        </div>
-
         {/* Loading */}
         {isLoading && <QuizSkeleton />}
 
@@ -228,7 +253,7 @@ export default function Episodes() {
         )}
 
         {/* No episodes yet */}
-        {!isLoading && !error && !active && (
+        {!isLoading && !error && !active && resolved.length === 0 && (
           <Card className="border border-amber-900/20 border-dashed">
             <CardContent className="py-16 text-center">
               <Ship className="h-12 w-12 text-amber-800/50 mx-auto mb-4 animate-wave-drift" />
@@ -240,13 +265,13 @@ export default function Episodes() {
           </Card>
         )}
 
-        {/* Active episode */}
+        {/* ── ACTIVE EPISODE (most recent unrevealed) ── */}
         {active && (
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-5">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent to-amber-900/40" />
-              <h2 className="font-cinzel text-xs text-amber-600/70 tracking-widest uppercase flex items-center gap-1.5">
-                <Scroll className="h-3 w-3" /> Episodio en curso
+              <h2 className="font-cinzel text-xs text-amber-500 tracking-widest uppercase flex items-center gap-1.5">
+                <Zap className="h-3 w-3 fill-amber-500" /> Apuestas abiertas
               </h2>
               <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-900/40" />
             </div>
@@ -254,44 +279,39 @@ export default function Episodes() {
           </div>
         )}
 
-        {/* Past episodes */}
-        {past.length > 0 && (
-          <div>
-            {/* Resolved */}
-            {past.filter(isRevealed).length > 0 && (
-              <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent to-emerald-900/40" />
-                  <span className="font-cinzel text-[10px] text-emerald-700/70 tracking-widest uppercase flex items-center gap-1">
-                    <Trophy className="h-3 w-3" /> Episodios resueltos
-                  </span>
-                  <div className="flex-1 h-px bg-gradient-to-l from-transparent to-emerald-900/40" />
-                </div>
-                <div className="space-y-3">
-                  {past.filter(isRevealed).map(ep => (
-                    <PastEpisodeCard key={ep.event.id} episode={ep} />
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* ── OTHER PENDING EPISODES (open for bets, not yet revealed) ── */}
+        {otherPending.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent to-amber-900/30" />
+              <span className="font-cinzel text-[10px] text-amber-600/70 tracking-widest uppercase flex items-center gap-1.5">
+                <Clock className="h-3 w-3" /> Pendientes de resolución
+              </span>
+              <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-900/30" />
+            </div>
+            <div className="space-y-6">
+              {otherPending.map(ep => (
+                <EpisodeQuiz key={ep.event.id} episode={ep} />
+              ))}
+            </div>
+          </div>
+        )}
 
-            {/* Pending reveal */}
-            {past.filter(ep => !isRevealed(ep)).length > 0 && (
-              <div className="mt-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent to-amber-900/30" />
-                  <span className="font-cinzel text-[10px] text-amber-700/60 tracking-widest uppercase flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> Pendientes de resolución
-                  </span>
-                  <div className="flex-1 h-px bg-gradient-to-l from-transparent to-amber-900/30" />
-                </div>
-                <div className="space-y-3">
-                  {past.filter(ep => !isRevealed(ep)).map(ep => (
-                    <PastEpisodeCard key={ep.event.id} episode={ep} />
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* ── RESOLVED EPISODES ── */}
+        {resolved.length > 0 && (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent to-emerald-900/40" />
+              <span className="font-cinzel text-[10px] text-emerald-600/70 tracking-widest uppercase flex items-center gap-1">
+                <Trophy className="h-3 w-3" /> Episodios resueltos
+              </span>
+              <div className="flex-1 h-px bg-gradient-to-l from-transparent to-emerald-900/40" />
+            </div>
+            <div className="space-y-3">
+              {resolved.map(ep => (
+                <PastEpisodeCard key={ep.event.id} episode={ep} />
+              ))}
+            </div>
           </div>
         )}
 
