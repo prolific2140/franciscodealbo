@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom';
 import { SiteHeader } from '@/components/SiteHeader';
 import { Ship, BookOpen, Scroll, Anchor, Wind } from 'lucide-react';
 
-const NAO_VICTORIA_IMG = 'https://blossom.primal.net/b2e6ffdeff2383e1fa4303bbfe9c422ba40bf98d99502040dfe18a85c169e348.jpg';
+const NAO_VICTORIA_IMG   = 'https://blossom.primal.net/b2e6ffdeff2383e1fa4303bbfe9c422ba40bf98d99502040dfe18a85c169e348.jpg';
+// Episodios button: entrada del estrecho — naos en mar bravo
+const ESTRECHO_IMG       = 'https://blossom.ditto.pub/cda54d3532e1d9605099006f6c96821519ec5011e509017f88652cc93cca8e1e.jpeg';
+// Cómo jugar button: flota de naos al atardecer
+const NAOS_IMG           = 'https://blossom.ditto.pub/1b0902eaa862b2c843443ab4b066379d15663d4b49ed0f9829e90df5ccaeaa03.jpeg';
 
 export default function Index() {
   useSeoMeta({
@@ -21,9 +25,7 @@ export default function Index() {
           alt="Nao Victoria en mar tempestuoso"
           className="w-full h-full object-cover object-center"
         />
-        {/* Dark overlay for legibility */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/85" />
-        {/* Atmospheric color tint */}
         <div className="absolute inset-0 bg-ocean-deep/40" />
       </div>
 
@@ -59,46 +61,70 @@ export default function Index() {
           </p>
 
           {/* ── TWO MAIN BUTTONS ────────────────────── */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-12">
 
-            {/* Episodios */}
+            {/* ── Episodios ── */}
             <Link
               to="/episodios"
-              className="group relative flex flex-col items-center gap-3 w-full sm:w-56 rounded-2xl border border-amber-600/60 bg-amber-900/40 hover:bg-amber-900/60 hover:border-amber-500/80 px-6 py-7 transition-all duration-300 shadow-xl shadow-black/40 hover:shadow-amber-900/40 backdrop-blur-sm"
+              className="group relative flex flex-col items-end justify-end w-full sm:w-64 h-40 rounded-2xl overflow-hidden border border-amber-600/50 shadow-2xl shadow-black/50 hover:shadow-amber-900/40 transition-all duration-400 hover:scale-[1.02]"
             >
-              <div className="relative">
-                <div className="absolute -inset-3 rounded-full bg-amber-500/15 scale-0 group-hover:scale-100 transition-transform duration-300 blur-sm" />
-                <Scroll className="h-8 w-8 text-amber-400 relative group-hover:text-amber-300 transition-colors duration-300 drop-shadow" />
-              </div>
-              <div>
-                <p className="font-cinzel text-lg font-bold text-amber-300 group-hover:text-amber-200 transition-colors tracking-wide">
-                  Episodios
-                </p>
-                <p className="font-garamond text-xs text-amber-100/50 mt-0.5 group-hover:text-amber-100/70 transition-colors">
+              {/* Background image */}
+              <img
+                src={ESTRECHO_IMG}
+                alt="Naos entrando al estrecho"
+                className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+              />
+              {/* Gradient overlay: dark bottom for text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10 group-hover:from-black/70 transition-all duration-300" />
+              {/* Amber tint on hover */}
+              <div className="absolute inset-0 bg-amber-900/0 group-hover:bg-amber-900/20 transition-all duration-300" />
+              {/* Golden top border glow on hover */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/0 group-hover:via-amber-500/70 to-transparent transition-all duration-300" />
+
+              {/* Content */}
+              <div className="relative z-10 w-full px-5 pb-4 text-left">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <Scroll className="h-4 w-4 text-amber-400 drop-shadow" />
+                  <p className="font-cinzel text-lg font-bold text-white tracking-wide drop-shadow-lg">
+                    Episodios
+                  </p>
+                </div>
+                <p className="font-garamond text-xs text-amber-100/60 group-hover:text-amber-100/80 transition-colors drop-shadow">
                   Ver todos los capítulos
                 </p>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-600/0 group-hover:via-amber-500/60 to-transparent transition-all duration-300" />
             </Link>
 
-            {/* Cómo jugar */}
+            {/* ── Cómo jugar ── */}
             <Link
               to="/como-jugar"
-              className="group relative flex flex-col items-center gap-3 w-full sm:w-56 rounded-2xl border border-white/15 bg-black/30 hover:bg-black/45 hover:border-amber-700/50 px-6 py-7 transition-all duration-300 shadow-xl shadow-black/40 backdrop-blur-sm"
+              className="group relative flex flex-col items-end justify-end w-full sm:w-64 h-40 rounded-2xl overflow-hidden border border-white/20 shadow-2xl shadow-black/50 hover:shadow-amber-900/30 transition-all duration-400 hover:scale-[1.02]"
             >
-              <div className="relative">
-                <div className="absolute -inset-3 rounded-full bg-amber-500/10 scale-0 group-hover:scale-100 transition-transform duration-300 blur-sm" />
-                <BookOpen className="h-8 w-8 text-amber-600/80 relative group-hover:text-amber-400 transition-colors duration-300" />
-              </div>
-              <div>
-                <p className="font-cinzel text-lg font-bold text-amber-500/90 group-hover:text-amber-300 transition-colors tracking-wide">
-                  Cómo jugar
-                </p>
-                <p className="font-garamond text-xs text-white/40 mt-0.5 group-hover:text-white/60 transition-colors">
+              {/* Background image */}
+              <img
+                src={NAOS_IMG}
+                alt="Flota de naos al atardecer"
+                className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+              />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10 group-hover:from-black/70 transition-all duration-300" />
+              {/* Warm tint on hover */}
+              <div className="absolute inset-0 bg-amber-700/0 group-hover:bg-amber-700/15 transition-all duration-300" />
+              {/* Golden top border glow on hover */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/0 group-hover:via-amber-400/60 to-transparent transition-all duration-300" />
+
+              {/* Content */}
+              <div className="relative z-10 w-full px-5 pb-4 text-left">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <BookOpen className="h-4 w-4 text-amber-400 drop-shadow" />
+                  <p className="font-cinzel text-lg font-bold text-white tracking-wide drop-shadow-lg">
+                    Cómo jugar
+                  </p>
+                </div>
+                <p className="font-garamond text-xs text-amber-100/60 group-hover:text-amber-100/80 transition-colors drop-shadow">
                   Aprende la dinámica
                 </p>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-600/0 group-hover:via-amber-600/40 to-transparent transition-all duration-300" />
             </Link>
           </div>
 
