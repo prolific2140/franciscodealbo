@@ -1,7 +1,7 @@
 import { useSeoMeta } from '@unhead/react';
 import { Link } from 'react-router-dom';
 import { SiteHeader } from '@/components/SiteHeader';
-import { ArrowLeft, Scroll, Zap, Trophy, BookOpen, Users, Clock, Anchor, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Scroll, Zap, Trophy, BookOpen, Users, Clock, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface StepProps {
@@ -111,32 +111,20 @@ export default function HowToPlay() {
           />
         </div>
 
-        {/* Info cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+        {/* Info card */}
+        <div className="mb-8">
           <Card className="border border-amber-900/25 bg-amber-900/10">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="h-4 w-4 text-amber-500/70" />
-                <p className="font-cinzel text-xs font-bold text-amber-400">Necesitas</p>
+                <p className="font-cinzel text-xs font-bold text-amber-400">Lo que necesitas para jugar</p>
               </div>
               <ul className="font-garamond text-xs text-muted-foreground space-y-1.5">
                 <li className="flex items-start gap-1.5"><span className="text-amber-600 mt-0.5">·</span> Una cuenta Nostr (npub)</li>
-                <li className="flex items-start gap-1.5"><span className="text-amber-600 mt-0.5">·</span> Una cartera Lightning (Alby, Mutiny…)</li>
+                <li className="flex items-start gap-1.5"><span className="text-amber-600 mt-0.5">·</span> Una cartera Lightning compatible (Alby, Mutiny…)</li>
+                <li className="flex items-start gap-1.5"><span className="text-amber-600 mt-0.5">·</span> Sats suficientes para la apuesta mínima de cada episodio</li>
                 <li className="flex items-start gap-1.5"><span className="text-amber-600 mt-0.5">·</span> Ganas de aprender historia</li>
               </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-amber-900/25 bg-amber-900/10">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Anchor className="h-4 w-4 text-amber-500/70" />
-                <p className="font-cinzel text-xs font-bold text-amber-400">Sin apuesta</p>
-              </div>
-              <p className="font-garamond text-xs text-muted-foreground leading-relaxed">
-                También puedes participar solo leyendo los episodios y respondiendo sin apostar sats.
-                En ese caso no optarás al premio, pero podrás seguir la crónica igualmente.
-              </p>
             </CardContent>
           </Card>
         </div>

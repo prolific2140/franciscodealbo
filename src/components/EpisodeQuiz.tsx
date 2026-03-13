@@ -25,6 +25,37 @@ interface EpisodeQuizProps {
   episode: QuizEpisode;
 }
 
+/**
+ * Wraps children in ZapDialog, but always renders children even if
+ * the narrator has no Lightning address configured (in which case
+ * the options would otherwise disappear entirely).
+ */
+function ZapDialogWrapper({
+  target,
+  onSuccess,
+  children,
+  fallback,
+}: {
+  target: Event;
+  onSuccess: () => void;
+  children: React.ReactNode;
+  fallback: React.ReactNode;
+}) {
+  const { data: targetAuthor } = useAuthor(target.pubkey);
+  const hasLightning = !!(targetAuthor?.metadata?.lud06 || targetAuthor?.metadata?.lud16);
+
+  if (!hasLightning) {
+    // No Lightning address: show options but can't zap — render fallback
+    return <>{fallback}</>;
+  }
+
+  return (
+    <ZapDialog target={target} onSuccess={onSuccess}>
+      {children}
+    </ZapDialog>
+  );
+}
+
 const LETTERS = ['a', 'b', 'c', 'd'] as const;
 const LABELS = ['A', 'B', 'C', 'D'] as const;
 const OPTION_KEYS = ['optionA', 'optionB', 'optionC', 'optionD'] as const;
@@ -132,11 +163,16 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
           <span className="font-cinzel text-xs text-amber-500 flex items-center gap-1.5">
             <Zap className="h-3.5 w-3.5 fill-amber-500" /> Apuestas abiertas
           </span>
-          {revealDateStr && (
-            <span className="font-garamond text-xs text-muted-foreground flex items-center gap-1.5">
-              <Clock className="h-3 w-3" /> Resolución: {revealDateStr}
+          <div className="flex items-center gap-3">
+            <span className="font-cinzel text-xs text-amber-400 font-bold flex items-center gap-1">
+              <Zap className="h-3 w-3 fill-amber-400" /> Mín. {episode.zapAmount} sats
             </span>
-          )}
+            {revealDateStr && (
+              <span className="font-garamond text-xs text-muted-foreground flex items-center gap-1.5">
+                <Clock className="h-3 w-3" /> Resolución: {revealDateStr}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -217,7 +253,7 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
               const isMyPick = letter === myLetter;
               const canInteract = !hasAnswered && !revealed && !!user;
 
-              const inner = (
+              const optionEl = (
                 <div className={cn(
                   'relative w-full text-left rounded-lg border px-4 py-3.5 transition-all duration-200 overflow-hidden',
                   getOptionStyle(letter),
@@ -270,7 +306,7 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
                       ) : canInteract ? (
                         <span className="text-[10px] text-amber-600/50 flex items-center gap-0.5 font-garamond">
                           <Zap className="h-2.5 w-2.5 fill-amber-600/50" />
-                          apostar {episode.zapAmount} sats
+                          {episode.zapAmount} sats
                         </span>
                       ) : null}
                     </div>
@@ -278,20 +314,21 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
                 </div>
               );
 
-              // Wrap clickable options in ZapDialog
+              // Wrap clickable options in ZapDialog — but always render the option even if ZapDialog returns null
               if (canInteract) {
                 return (
-                  <ZapDialog
+                  <ZapDialogWrapper
                     key={letter}
                     target={episode.event as Event}
                     onSuccess={() => onZapSuccess(letter)}
+                    fallback={<div key={letter}>{optionEl}</div>}
                   >
-                    {inner}
-                  </ZapDialog>
+                    {optionEl}
+                  </ZapDialogWrapper>
                 );
               }
 
-              return <div key={letter}>{inner}</div>;
+              return <div key={letter}>{optionEl}</div>;
             })}
           </div>
 
