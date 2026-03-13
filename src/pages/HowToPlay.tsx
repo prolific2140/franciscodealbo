@@ -1,7 +1,7 @@
 import { useSeoMeta } from '@unhead/react';
 import { Link } from 'react-router-dom';
 import { SiteHeader } from '@/components/SiteHeader';
-import { ArrowLeft, Scroll, Zap, Trophy, BookOpen, Users, Clock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Scroll, Zap, Trophy, BookOpen, Users, Clock, ChevronRight, Coins, Shuffle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const NAOS_IMG = 'https://blossom.ditto.pub/1b0902eaa862b2c843443ab4b066379d15663d4b49ed0f9829e90df5ccaeaa03.jpeg';
@@ -122,11 +122,61 @@ export default function HowToPlay() {
           />
           <Step
             number={5}
-            icon={<Trophy className="h-4 w-4" />}
-            title="Recibe tu premio"
-            description="Si acertaste, recibirás una parte proporcional del bote acumulado con las apuestas de todos los participantes."
-            detail="Los sats se reparten entre los acertantes según el importe apostado. A mayor apuesta, mayor premio si aciertas."
+            icon={<Shuffle className="h-4 w-4" />}
+            title="El sorteo del zapmaravedí de oro"
+            description="Si acertaste, entras automáticamente en el sorteo. El narrador elige al azar a uno de los acertantes, que se lleva el 80 % del total de todas las apuestas recaudadas."
+            detail="Da igual si apostaste el mínimo o mucho más: cada acertante tiene exactamente la misma probabilidad de ganar. El 20 % restante queda en el tesoro de la expedición."
           />
+        </div>
+
+        {/* ── ZAPMARAVEDÍ DE ORO ─────────────────── */}
+        <div className="mb-8">
+          <Card className="border border-amber-600/40 bg-amber-900/15 overflow-hidden">
+            <div className="h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
+            <CardContent className="p-5">
+              {/* Header */}
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="h-9 w-9 rounded-full border border-amber-600/50 bg-amber-900/40 flex items-center justify-center shrink-0">
+                  <Coins className="h-4 w-4 text-amber-400" />
+                </div>
+                <div>
+                  <p className="font-cinzel text-sm font-bold text-amber-300 leading-tight">El zapmaravedí de oro</p>
+                  <p className="font-garamond text-xs text-amber-600/70">El premio único de cada episodio</p>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p className="font-garamond text-sm text-foreground/80 leading-relaxed mb-4">
+                Apostando en cada episodio no compites contra los demás: <span className="text-amber-300">todos los que aciertan entran en un sorteo a partes iguales.</span> El narrador selecciona al azar a uno solo de entre los acertantes, que recibe el <span className="text-amber-300 font-semibold">80 % del bote total</span>.
+              </p>
+
+              {/* How it works */}
+              <div className="space-y-2 mb-4">
+                {[
+                  { icon: Zap,     text: 'Todos los que apuestan y aciertan entran en el sorteo.' },
+                  { icon: Shuffle, text: 'El narrador escoge un ganador al azar entre los acertantes.' },
+                  { icon: Coins,   text: 'El ganador recibe el 80 % del total recaudado vía Lightning.' },
+                  { icon: Trophy,  text: 'El 20 % restante queda para el tesoro de la expedición.' },
+                ].map(({ icon: Icon, text }, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <div className="h-5 w-5 rounded border border-amber-700/50 bg-amber-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <Icon className="h-3 w-3 text-amber-500" />
+                    </div>
+                    <p className="font-garamond text-xs text-muted-foreground leading-relaxed">{text}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Example */}
+              <div className="rounded-lg border border-amber-800/30 bg-black/20 px-4 py-3">
+                <p className="font-cinzel text-[10px] text-amber-600/60 uppercase tracking-widest mb-1.5">Ejemplo</p>
+                <p className="font-garamond text-xs text-muted-foreground leading-relaxed">
+                  Si se recaudan <span className="text-amber-400">1 000 sats</span> entre todos los participantes y hay <span className="text-amber-400">5 acertantes</span>, el sorteo elige a uno de ellos que recibe <span className="text-amber-300 font-semibold">800 sats</span>. Cada acertante tenía un 20 % de probabilidad de ganar, independientemente de cuánto apostó.
+                </p>
+              </div>
+            </CardContent>
+            <div className="h-px bg-gradient-to-r from-transparent via-amber-900/30 to-transparent" />
+          </Card>
         </div>
 
         {/* Info card */}
