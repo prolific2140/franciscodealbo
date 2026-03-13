@@ -1,4 +1,4 @@
-import { ExternalLink, BookOpen, ScrollText, Globe, Feather } from 'lucide-react';
+import { ExternalLink, BookOpen, ScrollText, Globe, Feather, Library } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface Source {
@@ -42,6 +42,26 @@ export const HISTORICAL_SOURCES: Source[] = [
     description:
       'Marinero que participó en la expedición y fue capturado en las Molucas. Escrita décadas después, su relación aporta detalles únicos del regreso de la Trinidad y de la estancia en las islas.',
     tag: 'Relación de Mafra',
+  },
+  {
+    key: 'gomara',
+    icon: Library,
+    title: 'Historia General de las Indias',
+    author: 'Francisco López de Gómara',
+    period: '1552',
+    description:
+      'Cronista e historiador español que, aunque no participó en la expedición, recogió testimonios directos y documentos de primera mano. Su obra ofrece una visión panorámica de los descubrimientos, con un capítulo dedicado al viaje de Magallanes y Elcano de gran valor historiográfico.',
+    tag: 'López de Gómara',
+  },
+  {
+    key: 'martinez',
+    icon: BookOpen,
+    title: 'Compendio de las historias de la India Oriental',
+    author: 'José Martínez de la Puente',
+    period: '1681',
+    description:
+      'Obra de síntesis del siglo XVII que recopila y contrasta las principales crónicas sobre las expediciones a las Indias Orientales, incluida la de Magallanes-Elcano. Especialmente útil para contextualizar los hechos en el marco de la rivalidad hispano-portuguesa por las especierías.',
+    tag: 'Martínez de la Puente',
   },
   {
     key: 'rutaelcano',

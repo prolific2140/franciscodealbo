@@ -15,6 +15,8 @@ All episode content is drawn exclusively from primary and verified secondary sou
 | `albo` | **Derrotero** | Francisco de Albo | c. 1519–1522 |
 | `pigafetta` | **Relación del primer viaje alrededor del mundo** | Antonio Pigafetta | c. 1522–1525 |
 | `mafra` | **Relación del viaje** | Ginés de Mafra | c. 1544 |
+| `gomara` | **Historia General de las Indias** | Francisco López de Gómara | 1552 |
+| `martinez` | **Compendio de las historias de la India Oriental** | José Martínez de la Puente | 1681 |
 | `rutaelcano` | **rutaelcano.com** | Web resource | Current |
 
 ### Source descriptions
@@ -22,6 +24,8 @@ All episode content is drawn exclusively from primary and verified secondary sou
 - **Derrotero de Francisco de Albo** — The technical navigation journal of the Trinidad's own pilot. Records latitudes, headings, soundings, and daily runs. The most precise nautical source of the entire expedition.
 - **Relación de Antonio Pigafetta** — The Italian chronicler who voluntarily embarked on the expedition. His diary is the most complete and vivid source: it describes indigenous peoples, storms, mutinies, and the strait. Indispensable.
 - **Relación de Ginés de Mafra** — A sailor who participated in the expedition and was captured in the Moluccas. Written decades later, his account provides unique details of the Trinidad's return voyage and the time spent on the islands.
+- **Historia General de las Indias — Francisco López de Gómara (1552)** — Spanish chronicler and historian who, though he did not participate in the expedition, gathered direct testimonies and first-hand documents. His work offers a panoramic view of the discoveries, with a chapter on the Magellan-Elcano voyage of great historiographic value.
+- **Compendio de las historias de la India Oriental — José Martínez de la Puente (1681)** — 17th-century synthesis work that compiles and cross-references the principal chronicles of expeditions to the East Indies, including Magellan-Elcano. Especially useful for contextualising events within the Spanish-Portuguese rivalry over the spice trade.
 - **rutaelcano.com** — Reference website with historical cartography, detailed chronology, specialist bibliography, and up-to-date documentation on the entire expedition. Excellent for verifying dates and places.
 
 ---
@@ -70,7 +74,7 @@ All episode content is drawn exclusively from primary and verified secondary sou
 | Tag | Description |
 |-----|-------------|
 | `zap_amount` | Suggested bet amount in sats (default: 21) |
-| `source` | Key of the primary historical source consulted: `albo`, `pigafetta`, `mafra`, or `rutaelcano` |
+| `source` | Key of the primary historical source consulted: `albo`, `pigafetta`, `mafra`, `gomara`, `martinez`, or `rutaelcano` |
 | `image` | URL to an illustration for the episode |
 
 ## Security Model
