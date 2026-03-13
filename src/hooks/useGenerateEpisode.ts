@@ -128,7 +128,7 @@ Responde SOLO con el JSON, sin ningún texto adicional.`;
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      'shakespeare',
+      'claude-sonnet-4.6',
       { temperature: 0.7, max_tokens: 2000 },
     );
 
