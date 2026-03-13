@@ -1,6 +1,7 @@
 import { useSeoMeta } from '@unhead/react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { EpisodeCard } from '@/components/EpisodeCard';
+import { SourcesPanel } from '@/components/SourcesPanel';
 import { useEpisodes } from '@/hooks/useEpisodes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
@@ -158,8 +159,11 @@ export default function Index() {
           </div>
         )}
 
+        {/* Historical sources */}
+        <SourcesPanel />
+
         {/* Footer attribution */}
-        <div className="mt-12 text-center">
+        <div className="mt-8 text-center">
           <div className="h-px bg-gradient-to-r from-transparent via-amber-900/30 to-transparent mb-4" />
           <a
             href="https://shakespeare.diy"

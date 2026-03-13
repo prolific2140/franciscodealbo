@@ -12,6 +12,7 @@ import { useEpisodeAnswers, useUserAnswer } from '@/hooks/useEpisodeAnswers';
 import { useToast } from '@/hooks/useToast';
 import { genUserName } from '@/lib/genUserName';
 import type { QuizEpisode } from '@/hooks/useEpisodes';
+import { SourceBadge } from '@/components/SourcesPanel';
 import { Zap, Anchor, ScrollText, Users, ChevronDown, ChevronUp, BookOpen, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -275,6 +276,14 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
                 : 'Lo que realmente ocurrió:'}
             </p>
             <p>{episode.answerExplanation}</p>
+          </div>
+        )}
+
+        {/* Source citation */}
+        {episode.source && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-garamond text-[11px]">Fuente:</span>
+            <SourceBadge sourceKey={episode.source} />
           </div>
         )}
 

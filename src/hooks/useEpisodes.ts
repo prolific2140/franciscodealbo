@@ -17,6 +17,8 @@ export interface QuizEpisode {
   answerExplanation: string;
   zapAmount: number;
   image?: string;
+  /** Source key: 'albo' | 'pigafetta' | 'mafra' | 'rutaelcano' */
+  source?: string;
 }
 
 function getTag(event: NostrEvent, name: string): string | undefined {
@@ -57,6 +59,7 @@ function parseEpisode(event: NostrEvent): QuizEpisode | null {
     answerExplanation,
     zapAmount: parseInt(getTag(event, 'zap_amount') || '21') || 21,
     image: getTag(event, 'image'),
+    source: getTag(event, 'source'),
   };
 }
 
