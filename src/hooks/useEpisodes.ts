@@ -74,7 +74,7 @@ function parseEpisode(event: NostrEvent): QuizEpisode | null {
 
 // Francisco de Albo's Nostr pubkey — only episodes published by him are shown
 // This prevents anyone from injecting unauthorized episodes
-export const NARRATOR_PUBKEY = 'a312db7c832f667c45ac4601c9efed4eb35dd421004cd6797ed8d28c13f62353';
+export const NARRATOR_PUBKEY = '26207bacea247b37705d46f45d64f4e6cbbf4710c4ea583d0f9d228ab544f9d8';
 
 export function useEpisodes() {
   const { nostr } = useNostr();
