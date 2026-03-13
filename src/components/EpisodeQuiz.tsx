@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ZapDialog } from '@/components/ZapDialog';
+import { ZapDialogWrapper } from '@/components/ZapDialogWrapper';
 import { SourceBadge } from '@/components/SourcesPanel';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -23,37 +23,6 @@ import type { Event } from 'nostr-tools';
 
 interface EpisodeQuizProps {
   episode: QuizEpisode;
-}
-
-/**
- * Wraps children in ZapDialog, but always renders children even if
- * the narrator has no Lightning address configured (in which case
- * the options would otherwise disappear entirely).
- */
-function ZapDialogWrapper({
-  target,
-  onSuccess,
-  children,
-  fallback,
-}: {
-  target: Event;
-  onSuccess: () => void;
-  children: React.ReactNode;
-  fallback: React.ReactNode;
-}) {
-  const { data: targetAuthor } = useAuthor(target.pubkey);
-  const hasLightning = !!(targetAuthor?.metadata?.lud06 || targetAuthor?.metadata?.lud16);
-
-  if (!hasLightning) {
-    // No Lightning address: show options but can't zap — render fallback
-    return <>{fallback}</>;
-  }
-
-  return (
-    <ZapDialog target={target} onSuccess={onSuccess}>
-      {children}
-    </ZapDialog>
-  );
 }
 
 const LETTERS = ['a', 'b', 'c', 'd'] as const;
@@ -314,14 +283,13 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
                 </div>
               );
 
-              // Wrap clickable options in ZapDialog — but always render the option even if ZapDialog returns null
+              // Wrap clickable options in ZapDialogWrapper — always renders options even without Lightning
               if (canInteract) {
                 return (
                   <ZapDialogWrapper
                     key={letter}
                     target={episode.event as Event}
                     onSuccess={() => onZapSuccess(letter)}
-                    fallback={<div key={letter}>{optionEl}</div>}
                   >
                     {optionEl}
                   </ZapDialogWrapper>
