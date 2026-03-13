@@ -256,54 +256,101 @@ function SorteoPanel({ episode }: { episode: QuizEpisode }) {
             ? 'Sorteando…'
             : chosenPubkey
             ? 'Repetir sorteo'
-            : `Sortear entre ${drawPool.length} ${revealed ? 'acertante' : 'apostante'}${drawPool.length !== 1 ? 's' : ''}`}
+            : `Realizar sorteo entre ${drawPool.length} ${revealed ? 'acertante' : 'apostante'}${drawPool.length !== 1 ? 's' : ''}`}
         </Button>
       )}
 
-      {/* Agraciado destacado */}
+      {/* Panel completo — solo visible tras pulsar "Realizar sorteo" */}
       {chosenParticipant && (
-        <div className="rounded-xl border border-amber-500/50 bg-amber-900/20 px-4 py-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="font-cinzel text-[10px] text-amber-500 uppercase tracking-widest">
-              ✦ Agraciado del sorteo ✦
-            </p>
-            <button
-              onClick={() => setChosenPubkey(null)}
-              className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+        <div className="space-y-4 rounded-xl border border-amber-700/30 bg-amber-900/10 px-4 py-4">
+
+          {/* Agraciado destacado */}
+          <div className="rounded-lg border border-amber-500/50 bg-amber-900/20 px-3 py-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="font-cinzel text-[10px] text-amber-500 uppercase tracking-widest">
+                ✦ Agraciado del sorteo ✦
+              </p>
+              <button
+                onClick={() => setChosenPubkey(null)}
+                className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <ParticipantCard
+              participant={chosenParticipant}
+              isChosen={true}
+              showZap={true}
+              prizeAmount={prize80}
+            />
+            {prize80 > 0 && (
+              <p className="font-garamond text-xs text-muted-foreground text-center">
+                Pulsa <span className="text-amber-400 font-semibold">Zapear</span> para enviarle{' '}
+                <span className="text-amber-400 font-semibold">{prize80.toLocaleString()} sats</span>{' '}
+                directamente a su cartera Lightning.
+              </p>
+            )}
           </div>
-          <ParticipantCard
-            participant={chosenParticipant}
-            isChosen={true}
-            showZap={true}
-            prizeAmount={prize80}
-          />
-          {prize80 > 0 && (
-            <p className="font-garamond text-xs text-muted-foreground text-center">
-              Pulsa <span className="text-amber-400 font-semibold">Zapear</span> para enviarle{' '}
-              <span className="text-amber-400 font-semibold">{prize80.toLocaleString()} sats</span>{' '}
-              directamente a su cartera Lightning.
-            </p>
+
+          {/* Separador */}
+          <div className="h-px bg-gradient-to-r from-transparent via-amber-800/30 to-transparent" />
+
+          {/* Dos columnas: acertantes / erróneos (episodio revelado) */}
+          {revealed && (
+            <div className="grid grid-cols-2 gap-4">
+              {/* Acertantes */}
+              <div className="space-y-2">
+                <p className="font-cinzel text-[10px] text-emerald-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <Trophy className="h-3 w-3" /> Acertaron ({correct.length})
+                </p>
+                {correct.length === 0
+                  ? <p className="font-garamond text-xs text-muted-foreground/50 italic">Ninguno</p>
+                  : <div className="space-y-1.5">
+                      {correct.map(p => (
+                        <ParticipantCard
+                          key={p.pubkey}
+                          participant={p}
+                          isChosen={p.pubkey === chosenPubkey}
+                          showZap={p.pubkey === chosenPubkey}
+                          prizeAmount={prize80}
+                        />
+                      ))}
+                    </div>
+                }
+              </div>
+
+              {/* Erróneos */}
+              <div className="space-y-2">
+                <p className="font-cinzel text-[10px] text-muted-foreground/50 uppercase tracking-widest flex items-center gap-1.5">
+                  <X className="h-3 w-3" /> Erraron ({wrong.length})
+                </p>
+                {wrong.length === 0
+                  ? <p className="font-garamond text-xs text-muted-foreground/50 italic">Ninguno</p>
+                  : <div className="space-y-1.5 opacity-50">
+                      {wrong.map(p => (
+                        <ParticipantCard
+                          key={p.pubkey}
+                          participant={p}
+                          isChosen={false}
+                          showZap={false}
+                          prizeAmount={0}
+                        />
+                      ))}
+                    </div>
+                }
+              </div>
+            </div>
           )}
-        </div>
-      )}
 
-      {/* ── Dos columnas: acertantes / erróneos ── */}
-      {participants.length > 0 && revealed && (
-        <div className="grid grid-cols-2 gap-3">
-
-          {/* Columna acertantes */}
-          <div className="space-y-2">
-            <p className="font-cinzel text-[10px] text-emerald-500 uppercase tracking-widest flex items-center gap-1.5">
-              <Trophy className="h-3 w-3" /> Acertaron ({correct.length})
-            </p>
-            {correct.length === 0 ? (
-              <p className="font-garamond text-xs text-muted-foreground/50 italic px-1">Ninguno</p>
-            ) : (
+          {/* Lista única para episodios sin revelar */}
+          {!revealed && participants.length > 0 && (
+            <div className="space-y-2">
+              <p className="font-cinzel text-[10px] text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                <Users className="h-3 w-3 text-amber-700" />
+                {participants.length} apostante{participants.length !== 1 ? 's' : ''}
+              </p>
               <div className="space-y-1.5">
-                {correct.map(p => (
+                {participants.map(p => (
                   <ParticipantCard
                     key={p.pubkey}
                     participant={p}
@@ -313,51 +360,8 @@ function SorteoPanel({ episode }: { episode: QuizEpisode }) {
                   />
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Columna erróneos */}
-          <div className="space-y-2">
-            <p className="font-cinzel text-[10px] text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1.5">
-              <X className="h-3 w-3" /> Erraron ({wrong.length})
-            </p>
-            {wrong.length === 0 ? (
-              <p className="font-garamond text-xs text-muted-foreground/50 italic px-1">Ninguno</p>
-            ) : (
-              <div className="space-y-1.5 opacity-50">
-                {wrong.map(p => (
-                  <ParticipantCard
-                    key={p.pubkey}
-                    participant={p}
-                    isChosen={false}
-                    showZap={false}
-                    prizeAmount={0}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Lista sin revelar: todos en una columna */}
-      {participants.length > 0 && !revealed && (
-        <div className="space-y-2">
-          <p className="font-cinzel text-[10px] text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-            <Users className="h-3 w-3 text-amber-700" />
-            {participants.length} apostante{participants.length !== 1 ? 's' : ''}
-          </p>
-          <div className="space-y-1.5">
-            {participants.map(p => (
-              <ParticipantCard
-                key={p.pubkey}
-                participant={p}
-                isChosen={p.pubkey === chosenPubkey}
-                showZap={p.pubkey === chosenPubkey}
-                prizeAmount={prize80}
-              />
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>

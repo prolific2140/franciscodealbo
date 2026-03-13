@@ -13,6 +13,7 @@ import {
   Anchor, Ship, Trophy,
   Users, Coins, ArrowLeft, Zap, ChevronDown, ChevronUp, ScrollText,
 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 import type { QuizEpisode } from '@/hooks/useEpisodes';
 
@@ -64,19 +65,17 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
   })();
 
   const totalSats = stats?.totalSats ?? 0;
-  const winnerCount = stats?.winners.length ?? 0;
+  const winnerSats = stats?.winnerSats ?? 0;
+  const totalParticipants = stats?.total ?? 0;
 
   return (
     <Card className="border border-emerald-900/30 overflow-hidden">
-      {/* Luminous green top accent */}
       <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
 
       <CardContent className="p-4 space-y-3">
-        {/* Top row — always visible */}
-        <button
-          onClick={() => setOpen(v => !v)}
-          className="w-full text-left group"
-        >
+
+        {/* Cabecera clicable */}
+        <button onClick={() => setOpen(v => !v)} className="w-full text-left group">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -102,7 +101,7 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
             </div>
           </div>
 
-          {/* Compact correct-answer pill — shown when collapsed */}
+          {/* Píldora de respuesta correcta — solo cuando está cerrado */}
           {!open && (
             <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-700/40 bg-emerald-900/15 px-2.5 py-1">
               <span className="font-cinzel font-bold text-[10px] text-emerald-400">{correctLabel}.</span>
@@ -113,26 +112,33 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
           )}
         </button>
 
-        {/* Stats row — always visible */}
-        <div className="flex items-center gap-4 border-t border-border/20 pt-2">
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Users className="h-3 w-3" /> {stats?.total ?? 0} apuestas
-          </span>
-          <span className="flex items-center gap-1 text-xs text-amber-600/70">
-            <Coins className="h-3 w-3" /> {totalSats.toLocaleString()} sats
-          </span>
-          {winnerCount > 0 && (
-            <span className="flex items-center gap-1 text-xs text-emerald-500">
-              <Trophy className="h-3 w-3" /> {winnerCount} ganador{winnerCount !== 1 ? 'es' : ''}
-            </span>
-          )}
+        {/* 3 métricas — siempre visibles */}
+        <div className="grid grid-cols-3 gap-2 border-t border-border/20 pt-2">
+          <div className="text-center">
+            <p className="font-cinzel text-sm font-bold text-amber-300">{totalParticipants}</p>
+            <p className="font-garamond text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
+              <Users className="h-2.5 w-2.5" /> apostantes
+            </p>
+          </div>
+          <div className="text-center border-x border-border/20">
+            <p className="font-cinzel text-sm font-bold text-amber-300">{totalSats.toLocaleString()}</p>
+            <p className="font-garamond text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
+              <Coins className="h-2.5 w-2.5" /> sats en juego
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="font-cinzel text-sm font-bold text-emerald-400">{winnerSats > 0 ? winnerSats.toLocaleString() : '—'}</p>
+            <p className="font-garamond text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
+              <Trophy className="h-2.5 w-2.5" /> sats al ganador
+            </p>
+          </div>
         </div>
 
-        {/* Expanded content */}
+        {/* Contenido expandido */}
         {open && (
           <div className="space-y-3 pt-1 border-t border-border/15">
 
-            {/* Narrative */}
+            {/* Narración */}
             <div className="space-y-1.5">
               <p className="font-cinzel text-[10px] text-amber-600/70 flex items-center gap-1.5 uppercase tracking-widest">
                 <ScrollText className="h-3 w-3" /> Narración
@@ -142,53 +148,15 @@ function PastEpisodeCard({ episode }: { episode: QuizEpisode }) {
               </p>
             </div>
 
-            {/* Options — read-only, correct answer highlighted */}
-            <div className="space-y-1.5">
-              {LETTERS.map((letter, i) => {
-                const text = episode[OPTION_KEYS[i]];
-                const isCorrect = letter === episode.answer;
-                const optStats = stats?.options[letter];
-                return (
-                  <div
-                    key={letter}
-                    className={cn(
-                      'relative flex items-center gap-2.5 rounded-md border px-3 py-2 overflow-hidden',
-                      isCorrect
-                        ? 'border-emerald-600/50 bg-emerald-900/20 text-emerald-200'
-                        : 'border-border/25 bg-card/20 text-muted-foreground/50 opacity-60',
-                    )}
-                  >
-                    {optStats && optStats.satPercent > 0 && (
-                      <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          width: `${optStats.satPercent}%`,
-                          background: isCorrect
-                            ? 'linear-gradient(90deg, hsl(142 50% 30% / 0.25), transparent)'
-                            : 'linear-gradient(90deg, hsl(0 40% 30% / 0.15), transparent)',
-                        }}
-                      />
-                    )}
-                    <span className={cn(
-                      'relative font-cinzel font-bold text-[11px] shrink-0 w-5 h-5 flex items-center justify-center rounded border',
-                      isCorrect
-                        ? 'border-emerald-500 text-emerald-300 bg-emerald-900/40'
-                        : 'border-border/30 text-muted-foreground/40',
-                    )}>
-                      {OPTION_LABELS[i]}
-                    </span>
-                    <span className="relative font-garamond text-xs leading-snug flex-1">{text}</span>
-                    {optStats && (
-                      <span className="relative text-[10px] text-muted-foreground/60 shrink-0 tabular-nums">
-                        {optStats.count}v · {optStats.sats.toLocaleString()}s
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+            {/* Respuesta correcta destacada */}
+            <div className="rounded-md border border-emerald-600/40 bg-emerald-900/20 px-3 py-2.5 flex items-start gap-2">
+              <span className="font-cinzel font-bold text-sm text-emerald-400 shrink-0">{correctLabel}.</span>
+              <span className="font-garamond text-sm text-emerald-200 leading-snug">
+                {episode[OPTION_KEYS[correctIdx]]}
+              </span>
             </div>
 
-            {/* Explanation */}
+            {/* Explicación */}
             <div className="rounded-md border border-emerald-800/30 bg-emerald-900/10 px-3 py-2.5">
               <p className="font-cinzel text-[10px] text-emerald-500 mb-1.5">Lo que realmente ocurrió</p>
               <p className="font-garamond text-sm text-emerald-200/80 leading-relaxed">
