@@ -129,7 +129,7 @@ Responde SOLO con el JSON, sin ningún texto adicional.`;
         { role: 'user', content: userPrompt },
       ],
       'shakespeare',
-      { temperature: 0.7, max_tokens: 1200 },
+      { temperature: 0.7, max_tokens: 2000 },
     );
 
     const rawContent = response.choices[0]?.message?.content;

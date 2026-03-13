@@ -109,22 +109,24 @@ async function handleAPIError(response: Response) {
   } else if (response.status === 402) {
     throw new Error('Insufficient credits. Please add credits to your account to use premium models, or use the free "tybalt" model.');
   } else if (response.status === 400) {
+    let errorBody: { error?: { type?: string; code?: string; message?: string; minimum_amount?: number }; details?: string } | null = null;
     try {
-      const error = await response.json();
-      if (error.error?.type === 'invalid_request_error') {
-        // Handle specific validation errors
-        if (error.error.code === 'minimum_amount_not_met') {
-          throw new Error(`Minimum credit amount is $${error.error.minimum_amount}. Please increase your payment amount.`);
-        } else if (error.error.code === 'unsupported_method') {
-          throw new Error('Payment method not supported. Please use "stripe" or "lightning".');
-        } else if (error.error.code === 'invalid_url') {
-          throw new Error('Invalid redirect URL provided for Stripe payment.');
-        }
-      }
-      throw new Error(`Invalid request: ${error.error?.message || error.details || error.error || 'Please check your request parameters.'}`);
+      errorBody = await response.json();
     } catch {
-      throw new Error('Invalid request. Please check your parameters and try again.');
+      // Could not parse JSON body
     }
+    if (errorBody?.error?.type === 'invalid_request_error') {
+      // Handle specific validation errors
+      if (errorBody.error.code === 'minimum_amount_not_met') {
+        throw new Error(`Minimum credit amount is $${errorBody.error.minimum_amount}. Please increase your payment amount.`);
+      } else if (errorBody.error.code === 'unsupported_method') {
+        throw new Error('Payment method not supported. Please use "stripe" or "lightning".');
+      } else if (errorBody.error.code === 'invalid_url') {
+        throw new Error('Invalid redirect URL provided for Stripe payment.');
+      }
+    }
+    const msg = errorBody?.error?.message || errorBody?.details || 'Please check your request parameters.';
+    throw new Error(`Invalid request: ${msg}`);
   } else if (response.status === 404) {
     throw new Error('Resource not found. Please check the payment ID or try again.');
   } else if (response.status >= 500) {
