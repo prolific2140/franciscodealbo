@@ -4,6 +4,8 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { ArrowLeft, Scroll, Zap, Trophy, BookOpen, Users, Clock, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
+const NAOS_IMG = 'https://blossom.ditto.pub/1b0902eaa862b2c843443ab4b066379d15663d4b49ed0f9829e90df5ccaeaa03.jpeg';
+
 interface StepProps {
   number: number;
   icon: React.ReactNode;
@@ -48,6 +50,29 @@ export default function HowToPlay() {
     <div className="min-h-screen bg-ocean-deep">
       <SiteHeader />
 
+      {/* ── HERO IMAGE ─────────────────────────── */}
+      <div className="relative h-48 sm:h-64 overflow-hidden isolate">
+        <img
+          src={NAOS_IMG}
+          alt="Flota de naos al atardecer"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/15 to-black/75" />
+        <div className="absolute inset-0 bg-ocean-deep/25" />
+        {/* Title overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 px-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <BookOpen className="h-5 w-5 text-amber-400 drop-shadow" />
+            <h1 className="font-cinzel text-2xl sm:text-3xl font-bold text-amber-300 drop-shadow-xl">
+              Cómo jugar
+            </h1>
+          </div>
+          <p className="font-garamond text-sm text-white/60 drop-shadow">
+            Una crónica interactiva de la primera vuelta al mundo
+          </p>
+        </div>
+      </div>
+
       <main className="container max-w-2xl mx-auto px-4 py-8 pb-16">
 
         {/* Back link */}
@@ -58,18 +83,11 @@ export default function HowToPlay() {
           <ArrowLeft className="h-3.5 w-3.5" /> Volver al inicio
         </Link>
 
-        {/* Header */}
+        {/* Intro text */}
         <div className="text-center mb-10">
-          <div className="flex justify-center mb-4">
-            <div className="h-12 w-12 rounded-full border border-amber-700/40 bg-amber-900/20 flex items-center justify-center">
-              <BookOpen className="h-5 w-5 text-amber-400" />
-            </div>
-          </div>
-          <h1 className="font-cinzel text-2xl font-bold text-amber-300 mb-2">Cómo jugar</h1>
-          <div className="h-px bg-gradient-to-r from-transparent via-amber-700/40 to-transparent my-4" />
+          <div className="h-px bg-gradient-to-r from-transparent via-amber-700/40 to-transparent mb-4" />
           <p className="font-garamond text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
-            Una crónica interactiva de la primera vuelta al mundo. Cada episodio esconde un secreto histórico.
-            ¿Adivinarás lo que ocurrió de verdad?
+            Cada episodio esconde un secreto histórico. ¿Adivinarás lo que ocurrió de verdad?
           </p>
         </div>
 

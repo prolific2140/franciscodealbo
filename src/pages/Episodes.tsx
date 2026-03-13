@@ -15,6 +15,8 @@ import {
 import { cn } from '@/lib/utils';
 import type { QuizEpisode } from '@/hooks/useEpisodes';
 
+const ESTRECHO_IMG = 'https://blossom.ditto.pub/cda54d3532e1d9605099006f6c96821519ec5011e509017f88652cc93cca8e1e.jpeg';
+
 const OPTION_KEYS = ['optionA', 'optionB', 'optionC', 'optionD'] as const;
 const OPTION_LABELS = ['A', 'B', 'C', 'D'] as const;
 const LETTERS = ['a', 'b', 'c', 'd'] as const;
@@ -177,6 +179,26 @@ export default function Episodes() {
     <div className="min-h-screen bg-ocean-deep">
       <SiteHeader />
 
+      {/* ── HERO IMAGE ─────────────────────────── */}
+      <div className="relative h-48 sm:h-64 overflow-hidden isolate">
+        <img
+          src={ESTRECHO_IMG}
+          alt="Naos entrando al estrecho de Magallanes"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70" />
+        <div className="absolute inset-0 bg-ocean-deep/30" />
+        {/* Title overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 px-4 text-center">
+          <h1 className="font-cinzel text-2xl sm:text-3xl font-bold text-amber-300 drop-shadow-xl mb-1">
+            Bitácora de Episodios
+          </h1>
+          <p className="font-garamond text-sm text-white/60 drop-shadow">
+            Todos los capítulos publicados de la primera circunnavegación del mundo
+          </p>
+        </div>
+      </div>
+
       <main className="container max-w-3xl mx-auto px-4 py-8 pb-16">
 
         {/* Back link */}
@@ -187,12 +209,8 @@ export default function Episodes() {
           <ArrowLeft className="h-3.5 w-3.5" /> Volver al inicio
         </Link>
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="font-cinzel text-2xl font-bold text-amber-300 mb-2">Bitácora de Episodios</h1>
-          <p className="font-garamond text-sm text-muted-foreground">
-            Todos los capítulos publicados de la primera circunnavegación del mundo
-          </p>
+        {/* (header now in hero) */}
+        <div>
         </div>
 
         {/* Loading */}

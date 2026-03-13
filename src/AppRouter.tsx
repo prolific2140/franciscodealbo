@@ -5,6 +5,7 @@ import Index from "./pages/Index";
 import Episodes from "./pages/Episodes";
 import HowToPlay from "./pages/HowToPlay";
 import PublishEpisode from "./pages/PublishEpisode";
+import Premio from "./pages/Premio";
 import { NIP19Page } from "./pages/NIP19Page";
 import NotFound from "./pages/NotFound";
 
@@ -17,6 +18,7 @@ export function AppRouter() {
         <Route path="/episodios" element={<Episodes />} />
         <Route path="/como-jugar" element={<HowToPlay />} />
         <Route path="/publicar" element={<PublishEpisode />} />
+        <Route path="/premio" element={<Premio />} />
         {/* NIP-19 route for npub1, note1, naddr1, nevent1, nprofile1 */}
         <Route path="/:nip19" element={<NIP19Page />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
