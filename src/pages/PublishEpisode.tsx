@@ -281,14 +281,14 @@ export default function PublishEpisode() {
                     Fuente principal consultada
                   </Label>
                   <Select
-                    value={form.source}
-                    onValueChange={(v) => setForm(f => ({ ...f, source: v }))}
+                    value={form.source || 'none'}
+                    onValueChange={(v) => setForm(f => ({ ...f, source: v === 'none' ? '' : v }))}
                   >
                     <SelectTrigger className="bg-background/50 border-border/60 font-garamond">
                       <SelectValue placeholder="Selecciona la fuente..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="" className="font-garamond text-muted-foreground">Sin especificar</SelectItem>
+                      <SelectItem value="none" className="font-garamond text-muted-foreground">Sin especificar</SelectItem>
                       {HISTORICAL_SOURCES.map(source => (
                         <SelectItem key={source.key} value={source.key} className="font-garamond">
                           {source.tag} — {source.author}
