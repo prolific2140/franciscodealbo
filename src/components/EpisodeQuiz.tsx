@@ -16,10 +16,11 @@ import type { QuizEpisode } from '@/hooks/useEpisodes';
 import { isRevealed } from '@/hooks/useEpisodes';
 import {
   Zap, Anchor, Users, ChevronDown, ChevronUp,
-  BookOpen, Clock, Trophy, Coins, ScrollText,
+  BookOpen, Clock, Trophy, Coins, ScrollText, Volume2, VolumeX,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Event } from 'nostr-tools';
+import { useEpisodeAudio } from '@/hooks/useEpisodeAudio';
 
 interface EpisodeQuizProps {
   episode: QuizEpisode;
@@ -37,6 +38,7 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
   const queryClient = useQueryClient();
 
   const [expanded, setExpanded] = useState(false);
+  const { isPlaying, toggle: toggleAudio, isSupported: audioSupported } = useEpisodeAudio(episode);
 
   const revealed = isRevealed(episode);
   const aTag = `37183:${episode.event.pubkey}:${episode.d}`;
@@ -173,9 +175,27 @@ export function EpisodeQuiz({ episode }: EpisodeQuizProps) {
                 </p>
               </div>
             </div>
-            <Badge className="font-cinzel text-xs bg-amber-900/30 text-amber-400 border-amber-700/40 shrink-0">
-              Ep. {episode.episode}
-            </Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              {audioSupported && (
+                <button
+                  onClick={toggleAudio}
+                  title={isPlaying ? 'Detener narración' : 'Escuchar narración'}
+                  className={cn(
+                    'flex items-center justify-center w-7 h-7 rounded-full border transition-all duration-200',
+                    isPlaying
+                      ? 'border-amber-500 bg-amber-500/20 text-amber-400 animate-pulse'
+                      : 'border-amber-800/50 bg-card/50 text-amber-600/70 hover:border-amber-500/60 hover:text-amber-400 hover:bg-amber-500/10'
+                  )}
+                >
+                  {isPlaying
+                    ? <VolumeX className="h-3.5 w-3.5" />
+                    : <Volume2 className="h-3.5 w-3.5" />}
+                </button>
+              )}
+              <Badge className="font-cinzel text-xs bg-amber-900/30 text-amber-400 border-amber-700/40 shrink-0">
+                Ep. {episode.episode}
+              </Badge>
+            </div>
           </div>
 
           {/* Title */}

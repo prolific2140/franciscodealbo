@@ -13,8 +13,9 @@ import { useToast } from '@/hooks/useToast';
 import { genUserName } from '@/lib/genUserName';
 import type { QuizEpisode } from '@/hooks/useEpisodes';
 import { SourceBadge } from '@/components/SourcesPanel';
-import { Zap, Anchor, ScrollText, Users, ChevronDown, ChevronUp, BookOpen, Swords } from 'lucide-react';
+import { Zap, Anchor, ScrollText, Users, ChevronDown, ChevronUp, BookOpen, Swords, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEpisodeAudio } from '@/hooks/useEpisodeAudio';
 
 interface EpisodeCardProps {
   episode: QuizEpisode;
@@ -34,6 +35,7 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [pendingAnswer, setPendingAnswer] = useState<'a' | 'b' | 'c' | 'd' | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const { isPlaying, toggle: toggleAudio, isSupported: audioSupported } = useEpisodeAudio(episode);
 
   const { data: stats, isLoading: statsLoading } = useEpisodeAnswers(episode.event.id, undefined);
   const { data: userAnswer } = useUserAnswer(episode.event.id, user?.pubkey);
@@ -147,9 +149,27 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
               </p>
             </div>
           </div>
-          <Badge className="font-cinzel text-xs bg-amber-900/30 text-amber-400 border-amber-700/40 whitespace-nowrap shrink-0">
-            Ep. {episode.episode}
-          </Badge>
+          <div className="flex items-center gap-2 shrink-0">
+            {audioSupported && (
+              <button
+                onClick={toggleAudio}
+                title={isPlaying ? 'Detener narración' : 'Escuchar narración'}
+                className={cn(
+                  'flex items-center justify-center w-7 h-7 rounded-full border transition-all duration-200',
+                  isPlaying
+                    ? 'border-amber-500 bg-amber-500/20 text-amber-400 animate-pulse'
+                    : 'border-amber-800/50 bg-card/50 text-amber-600/70 hover:border-amber-500/60 hover:text-amber-400 hover:bg-amber-500/10'
+                )}
+              >
+                {isPlaying
+                  ? <VolumeX className="h-3.5 w-3.5" />
+                  : <Volume2 className="h-3.5 w-3.5" />}
+              </button>
+            )}
+            <Badge className="font-cinzel text-xs bg-amber-900/30 text-amber-400 border-amber-700/40 whitespace-nowrap shrink-0">
+              Ep. {episode.episode}
+            </Badge>
+          </div>
         </div>
 
         <h2 className="font-cinzel text-lg font-bold text-amber-200 mt-3 leading-snug">
