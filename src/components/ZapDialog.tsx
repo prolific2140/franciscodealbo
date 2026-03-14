@@ -264,6 +264,7 @@ function fireConfetti() {
 
 export function ZapDialog({ target, children, className, onSuccess, extraTags }: ZapDialogProps) {
   const [open, setOpen] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
   const { user } = useCurrentUser();
   const { data: author } = useAuthor(target.pubkey);
   const { toast } = useToast();
@@ -272,6 +273,7 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
   const handleZapSuccess = useCallback(() => {
     setOpen(false);
     fireConfetti();
+    setShowThankYou(true);
     onSuccess?.();
   }, [onSuccess]);
 
@@ -386,9 +388,39 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
     return null;
   }
 
+  const thankYouDialog = (
+    <Dialog open={showThankYou} onOpenChange={setShowThankYou}>
+      <DialogContent className="sm:max-w-[400px] text-center" data-testid="thank-you-modal">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-cinzel text-amber-600 mt-2">
+            ⚡ ¡Apuesta registrada!
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center gap-4 py-4">
+          <div className="text-5xl">🌍</div>
+          <p className="text-base font-garamond text-foreground leading-relaxed">
+            Gracias por participar en <span className="font-bold text-amber-600">La Vuelta al Mundo</span>.
+          </p>
+          <p className="text-sm text-muted-foreground font-garamond leading-relaxed">
+            Tu apuesta ha sido registrada en la expedición Magallanes-Elcano. ¡Buena suerte, navegante! ⚓
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowThankYou(false)}
+          className="w-full font-cinzel"
+          size="lg"
+        >
+          ¡A navegar!
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (isMobile) {
     // Use drawer for entire mobile flow, make it full-screen when showing invoice
     return (
+      <>
+        {thankYouDialog}
       <Drawer
         open={open}
         onOpenChange={(newOpen) => {
@@ -463,33 +495,37 @@ export function ZapDialog({ target, children, className, onSuccess, extraTags }:
           </div>
         </DrawerContent>
       </Drawer>
+      </>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <div className={`cursor-pointer ${className || ''}`}>
-          {children}
-        </div>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[95vh] overflow-hidden" data-testid="zap-modal">
-        <DialogHeader>
-          <DialogTitle className="text-lg break-words font-cinzel">
-            {invoice ? 'Pago Lightning' : '⚡ Apostar sats'}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-center break-words font-garamond">
-            {invoice ? (
-              'Paga con la red Bitcoin Lightning'
-            ) : (
-              'Elige una cantidad o introduce la que quieras. Tu zap registra tu apuesta en la expedición.'
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="overflow-y-auto">
-          <ZapContent {...contentProps} />
-        </div>
-      </DialogContent>
-    </Dialog>
+    <>
+      {thankYouDialog}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <div className={`cursor-pointer ${className || ''}`}>
+            {children}
+          </div>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px] max-h-[95vh] overflow-hidden" data-testid="zap-modal">
+          <DialogHeader>
+            <DialogTitle className="text-lg break-words font-cinzel">
+              {invoice ? 'Pago Lightning' : '⚡ Apostar sats'}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-center break-words font-garamond">
+              {invoice ? (
+                'Paga con la red Bitcoin Lightning'
+              ) : (
+                'Elige una cantidad o introduce la que quieras. Tu zap registra tu apuesta en la expedición.'
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto">
+            <ZapContent {...contentProps} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
