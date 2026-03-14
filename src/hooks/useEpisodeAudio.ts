@@ -52,19 +52,29 @@ export function useEpisodeAudio(episode: QuizEpisode) {
     utterance.rate = 0.95;
     utterance.pitch = 1;
 
-    // Prefer a Spanish voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const spanishVoice = voices.find(
-      (v) => v.lang.startsWith('es') && !v.name.toLowerCase().includes('compact')
-    );
-    if (spanishVoice) utterance.voice = spanishVoice;
-
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);
     utterance.onerror = () => setIsPlaying(false);
 
     utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+
+    // Voices may not be loaded yet (especially Chrome). Wait for them if needed.
+    const speak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const spanishVoice = voices.find(
+        (v) => v.lang.startsWith('es') && !v.name.toLowerCase().includes('compact')
+      );
+      if (spanishVoice) utterance.voice = spanishVoice;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      speak();
+    } else {
+      window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+    }
+
     setIsPlaying(true);
   }, [isPlaying, episode]);
 
