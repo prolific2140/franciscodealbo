@@ -1,0 +1,16 @@
+{
+  "name": "La Vuelta al Mundo",
+  "short_name": "Vuelta al Mundo",
+  "description": "La primera circunnavegación del mundo narrada por Francisco de Albo. Apuesta tus sats en cada episodio.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0500",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

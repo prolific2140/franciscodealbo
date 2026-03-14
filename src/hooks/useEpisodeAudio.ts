@@ -14,20 +14,32 @@ function buildNarrationText(episode: QuizEpisode): string {
   ].join(' ');
 }
 
+function isSpeechSupported(): boolean {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+}
+
 export function useEpisodeAudio(episode: QuizEpisode) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Detect support after mount (avoids SSR/SW issues)
+  useEffect(() => {
+    const supported = isSpeechSupported();
+    console.log('[Audio] speechSynthesis supported:', supported, typeof window, 'speechSynthesis' in window);
+    setIsSupported(supported);
+  }, []);
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
+      if (isSpeechSupported()) window.speechSynthesis.cancel();
     };
   }, []);
 
   // Keep isPlaying in sync if browser stops speech externally
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || !isSpeechSupported()) return;
     const id = setInterval(() => {
       if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
         setIsPlaying(false);
@@ -37,7 +49,8 @@ export function useEpisodeAudio(episode: QuizEpisode) {
   }, [isPlaying]);
 
   const toggle = useCallback(() => {
-    if (!('speechSynthesis' in window)) return;
+    console.log('[Audio] toggle called, isSpeechSupported:', isSpeechSupported());
+    if (!isSpeechSupported()) return;
 
     if (isPlaying) {
       window.speechSynthesis.cancel();
@@ -47,38 +60,37 @@ export function useEpisodeAudio(episode: QuizEpisode) {
 
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(buildNarrationText(episode));
+    const text = buildNarrationText(episode);
+    console.log('[Audio] text length:', text.length);
+
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
     utterance.rate = 0.95;
     utterance.pitch = 1;
 
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
+    utterance.onstart = () => { console.log('[Audio] started'); setIsPlaying(true); };
+    utterance.onend = () => { console.log('[Audio] ended'); setIsPlaying(false); };
+    utterance.onerror = (e) => { console.error('[Audio] error:', e.error); setIsPlaying(false); };
 
     utteranceRef.current = utterance;
 
-    // Voices may not be loaded yet (especially Chrome). Wait for them if needed.
-    const speak = () => {
+    const doSpeak = () => {
       const voices = window.speechSynthesis.getVoices();
-      const spanishVoice = voices.find(
-        (v) => v.lang.startsWith('es') && !v.name.toLowerCase().includes('compact')
-      );
+      console.log('[Audio] voices:', voices.length);
+      const spanishVoice = voices.find(v => v.lang.startsWith('es'));
       if (spanishVoice) utterance.voice = spanishVoice;
       window.speechSynthesis.speak(utterance);
+      console.log('[Audio] speaking:', window.speechSynthesis.speaking, 'pending:', window.speechSynthesis.pending);
     };
 
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      speak();
+    if (window.speechSynthesis.getVoices().length > 0) {
+      doSpeak();
     } else {
-      window.speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+      window.speechSynthesis.addEventListener('voiceschanged', doSpeak, { once: true });
     }
 
     setIsPlaying(true);
   }, [isPlaying, episode]);
-
-  const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
   return { isPlaying, toggle, isSupported };
 }
